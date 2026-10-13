@@ -35,6 +35,7 @@ const Player = {
   update(dt) {
     const m = World.cur; if (!m) return;
     P.inv = Math.max(0, P.inv - dt); P.hurtT = Math.max(0, P.hurtT - dt); P.rollCd = Math.max(0, P.rollCd - dt);
+    if (P.show) { P.show.t += dt; if (P.show.t > 1.6) P.show = null; }
     // отброс
     if (P.kbx || P.kby) { moveEnt(m, P, P.kbx * dt, P.kby * dt); P.kbx *= .85; P.kby *= .85; if (Math.abs(P.kbx) + Math.abs(P.kby) < 5) P.kbx = P.kby = 0; }
     if (Game.locked() || Fishing.active) { P.moving = false; P.charging = null; return; }
@@ -61,7 +62,9 @@ const Player = {
       P.moving = true;
       if (Math.abs(a.x) > Math.abs(a.y) * 1.05) P.dir = a.x > 0 ? 'right' : 'left'; else P.dir = a.y > 0 ? 'down' : 'up';
       moveEnt(m, P, a.x * spd * dt, a.y * spd * dt);
-      P.animT += dt * (spd / 72) * 7; P.stepT += dt; if (P.stepT > .3) { P.stepT = 0; AU.sfx('step'); }
+      P.animT += dt * (spd / 72) * 8.5;
+      const stp = Math.floor(P.animT) % 4;
+      if (stp !== P.lastStep) { P.lastStep = stp; if (stp === 0 || stp === 2) { AU.sfx('step'); if (m.outdoor || m.theme === 'dungeon') Parts.dust(P.x, P.y, 1); } }
     } else { P.moving = false; P.animT = 0; }
     // слоты
     for (let i = 0; i < 12; i++) if (Input.hit['s' + i]) this.select(i);
@@ -153,44 +156,79 @@ const Player = {
     if (S.hp <= 0) { S.hp = 0; Game.die(); }
   },
   /* ---------- рисование ---------- */
+  pose() {
+    const t = Render.t, a = P.act;
+    const pose = { step: P.moving ? Math.floor(P.animT) % 4 : 0, br: !P.moving && !a && Math.sin(t * 2.4) > .55 ? 1 : 0, bl: (t % 3.9) < .13 ? 1 : 0 };
+    if (a) {
+      const k = a.t / a.dur;
+      if (a.kind === 'tool') pose.arm = a.tool === 'can' ? 'fwd' : (k < .5 ? 'up' : 'fwd');
+      else if (a.kind === 'swing') pose.arm = 'fwd';
+      else if (a.kind === 'eat') pose.arm = 'fwd';
+      pose.step = 0; pose.br = 0;
+    }
+    if (P.charging) { pose.arm = P.charging.rod ? 'up' : 'up'; pose.step = 0; pose.br = 0; }
+    if (Fishing.active) { pose.arm = 'fwd'; pose.step = 0; }
+    if (P.show) { pose.arm = 'hold'; pose.step = 0; pose.br = 0; }
+    return pose;
+  },
   draw(g) {
     const L = playerLook();
-    let fr = P.moving ? (Math.floor(P.animT) % 4 === 1 ? 1 : Math.floor(P.animT) % 4 === 3 ? 2 : 0) : 0;
-    let dir = P.dir;
-    let c = drawChar(L, dir === 'right' ? 'left' : dir, fr); if (dir === 'right') c = spr('flip:' + 'ch:player:left:' + fr, () => flipH(drawChar(L, 'left', fr)));
-    const x = Math.round(P.x - 8), y = Math.round(P.y - 31);
-    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(P.x, P.y - 1, 6, 2.5, 0, 0, 7); g.fill();
+    const pose = this.pose();
+    const c = charSprite(L, P.dir, pose);
+    const x = P.x - 8, y = P.y - 32;
+    // тень
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(P.x, P.y - 1, 6.5 - (pose.step % 2) * .6, 2.6, 0, 0, 7); g.fill();
     if (P.inv > 0 && P.roll <= 0 && Math.floor(P.inv * 15) % 2) return;
     if (P.roll > 0) {
-      g.save(); g.translate(P.x, P.y - 10); g.rotate((P.rdx >= 0 ? 1 : -1) * (1 - P.roll / .3) * Math.PI * 2); g.drawImage(c, -8, -14, 16, 26); g.restore(); return;
+      const k = 1 - P.roll / .3;
+      g.save(); g.translate(P.x, P.y - 10); g.rotate((P.rdx >= 0 ? 1 : -1) * k * Math.PI * 2); g.scale(1, .85); g.drawImage(c, -8, -18, 16, 32); g.restore();
+      return;
     }
-    // инструмент за спиной (вверх)
     const a = P.act;
-    if (a && P.dir === 'up') this.drawTool(g, a);
+    const behind = a && (P.dir === 'up' || (a.kind === 'tool' && a.t / a.dur < .5 && P.dir === 'down'));
+    if (behind) this.drawTool(g, a);
     g.drawImage(c, x, y);
-    if (P.hurtT > 0) g.drawImage(tint(c, '#ff0000', .6), x, y);
-    if (a && P.dir !== 'up') this.drawTool(g, a);
+    if (P.hurtT > 0) g.drawImage(tint(c, '#ff2030', .65), x, y);
+    if (a && !behind) this.drawTool(g, a);
+    if (P.charging && !P.charging.rod) { const ic = itemIconCanvas(P.charging.item.id); g.save(); g.translate(P.x, P.y - 30); g.rotate(-.6 + Math.sin(Render.t * 18) * .05); g.drawImage(ic, -2, -14, 16, 16); g.restore(); }
     if (Fishing.active) Fishing.drawRod(g);
-    if (P.charging && !P.charging.rod) { const lv = Math.min(P.charging.tier, Math.floor(P.charging.t / .45)); g.fillStyle = '#000'; g.fillRect(P.x - 9, P.y - 38, 18, 4); g.fillStyle = ['#aaa', '#e07a3a', '#d8dee6', '#f2c430'][lv]; g.fillRect(P.x - 8, P.y - 37, 16 * Math.min(1, P.charging.t / (.45 * Math.max(1, P.charging.tier))), 2); }
+    if (P.show) { const b = Math.min(1, P.show.t * 4); g.drawImage(itemIconCanvas(P.show.id, P.show.of), P.x - 8, P.y - 46 - b * 4, 16, 16); }
+    if (P.charging && !P.charging.rod) { const lv = Math.min(P.charging.tier, Math.floor(P.charging.t / .45)); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(P.x - 10, P.y - 42, 20, 4); g.fillStyle = ['#bbb', '#e07a3a', '#d8dee6', '#f2c430'][lv]; g.fillRect(P.x - 9, P.y - 41, 18 * Math.min(1, P.charging.t / (.45 * Math.max(1, P.charging.tier))), 2); }
   },
   drawTool(g, a) {
     const id = a.kind === 'swing' ? a.item : ({ hoe: 'hoe', can: 'can', axe: 'axe', pick: 'pick' })[a.tool];
     if (!id) return;
     const ic = itemIconCanvas(id);
-    const k = a.t / a.dur;
-    const [dx, dy] = DIRV[P.dir];
+    const k = U.clamp(a.t / a.dur, 0, 1);
+    const D = Math.PI / 180;
     g.save();
     if (a.kind === 'swing') {
-      const base = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[P.dir];
-      const ang = base - 1.3 + k * 2.6;
-      g.translate(P.x, P.y - 12); g.rotate(ang + Math.PI / 4); g.drawImage(ic, 2, -16, 14, 14);
+      const base = { right: 0, down: 90, left: 180, up: -90 }[P.dir] * D;
+      const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // плавный разгон
+      const ang = base - 1.35 + e * 2.7;
+      g.translate(P.x, P.y - 13); g.rotate(ang + Math.PI / 4);
+      g.drawImage(ic, 1, -17, 17, 17);
       g.restore();
-      if (k > .2 && k < .8) { g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2; g.beginPath(); g.arc(P.x, P.y - 12, 18, base - 1.2, base - 1.2 + k * 2.4); g.stroke(); }
+      if (k > .15 && k < .85) {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 3; i++) { g.strokeStyle = `rgba(255,255,255,${.35 - i * .1})`; g.lineWidth = 2.5 - i * .7; g.beginPath(); g.arc(P.x, P.y - 13, 19 - i * 2.5, base - 1.3, base - 1.3 + e * 2.6); g.stroke(); }
+        g.restore();
+      }
       return;
     }
-    const lift = k < .6 ? -k / .6 : -1 + (k - .6) / .4 * 1.6;
-    if (P.dir === 'left' || P.dir === 'right') { g.translate(P.x + dx * 6, P.y - 18); g.scale(dx, 1); g.rotate(lift * 1.2); g.drawImage(ic, 0, -14, 14, 14); }
-    else { g.translate(P.x + 2, P.y - 16 + dy * 4 + lift * 6); g.drawImage(ic, -7, -7, 14, 14); }
+    // инструмент: замах над головой → удар перед собой
+    const sideL = P.dir === 'left', sideR = P.dir === 'right';
+    let from, to, hx = P.x, hy = P.y - 18;
+    if (a.tool === 'can') { from = to = sideL ? 200 : sideR ? -20 : P.dir === 'down' ? 60 : -100; hy = P.y - 14; if (sideL) hx -= 5; if (sideR) hx += 5; }
+    else if (sideL) { from = -80; to = -200; hx -= 2; }
+    else if (sideR) { from = -100; to = 20; hx += 2; }
+    else if (P.dir === 'down') { from = -95; to = 75; hy = P.y - 20; }
+    else { from = 95; to = -80; hy = P.y - 22; }
+    const e = k < .5 ? (k / .5) * .25 : .25 + (1 - Math.pow(1 - (k - .5) / .5, 3)) * .75;
+    const th = (from + (to - from) * e) * D;
+    g.translate(hx, hy); g.rotate(th + Math.PI / 4);
+    if (a.tool === 'can') { g.rotate(Math.sin(k * Math.PI) * .5); }
+    g.drawImage(ic, -3, -15, 17, 17);
     g.restore();
   },
   drawUI(ctx, sx, sy) {
@@ -229,7 +267,7 @@ const Tools = {
       if (m.isWater(f.tx, f.ty) || (m.objAt(f.tx, f.ty) && m.objAt(f.tx, f.ty).t === 'well')) { S.water = [40, 55, 70, 85][tier]; AU.sfx('water'); UI.note('Лейка наполнена'); UI.toolbar(); return; }
       if (S.water <= 0) { UI.note('Лейка пуста. Набери воды у пруда.', 'bad'); AU.sfx('error'); return; }
       const tiles = this.tilesFor(level);
-      for (const [x, y] of tiles) { if (S.water <= 0) break; const s = m.soilAt(x, y); if (s) { if (!s.water) { s.water = true; } S.water--; for (let k = 0; k < 4; k++) Parts.add(x * 16 + 8, y * 16 + 6, (Math.random() - .5) * 40, -Math.random() * 30, '#7ab8ff', .5); } }
+      for (const [x, y] of tiles) { if (S.water <= 0) break; const s = m.soilAt(x, y); if (s) { if (!s.water) { s.water = true; } S.water--; Parts.splash(x * 16 + 8, y * 16 + 9); } }
       useEnergy(toolCost('can') * Math.max(1, level + 1)); AU.sfx('water'); UI.toolbar(); return;
     }
     if (tool === 'axe' || tool === 'pick') { useEnergy(toolCost(tool)); this.hitObj(m, f.tx, f.ty, tool, tier); return; }
@@ -271,7 +309,7 @@ const Tools = {
       case 'weed': this.cutWeed(m, o); return;
       case 'rock':
         if (tool !== 'pick') { AU.sfx('pick'); return; }
-        o.hp -= dmg; AU.sfx('pick'); Parts.burst(x * 16 + 8, y * 16 + 8, '#8a8580', 4);
+        o.hp -= dmg; AU.sfx('pick'); Parts.burst(x * 16 + 8, y * 16 + 8, '#8a8580', 4); Parts.sparks(x * 16 + 8, y * 16 + 6, '#ffe8a0', 4);
         if (o.hp <= 0) Mining.breakRock(m, o);
         return;
       case 'crate': if (tool === 'pick' || tool === 'axe') Mining.breakCrate(m, o); return;

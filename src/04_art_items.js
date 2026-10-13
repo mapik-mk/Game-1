@@ -100,36 +100,159 @@ const ICON = {
   torch(p) { p.vl(8, 6, 15, '#6a4a2a'); p.circ(8, 4, 2, '#ff8020'); p.p(8, 3, '#ffe060'); },
   key(p) { p.ring(5, 5, 3, '#c9a24a'); p.line(7, 7, 14, 14, '#c9a24a'); p.line(11, 13, 13, 11, '#c9a24a'); },
 };
+/* ---------- детальные 32x32 инструменты и оружие ---------- */
+const METAL = [
+  { b: '#9aa3ae', l: '#e2e8ef', d: '#59616c', e: '#ffffff' },   // обычный
+  { b: '#cf7a3c', l: '#f6b07a', d: '#874118', e: '#ffe0c0', pat: '#5fb39a' }, // медь
+  { b: '#b9cadb', l: '#f2f8ff', d: '#62748a', e: '#ffffff' },   // железо
+  { b: '#f2c22e', l: '#fff3a6', d: '#a3730c', e: '#ffffff' },   // золото
+  { b: '#a01c44', l: '#ff6a8a', d: '#4e0618', e: '#ffd0da' },   // кровь
+];
+const WOOD = { b: '#93602f', l: '#c08a52', d: '#5a3518', g: '#7a4c24' };
+function thick(p, x0, y0, x1, y1, w, col) { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 2 || 1; for (let i = 0; i <= n; i++) { const t = i / n; const x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t; p.r(Math.round(x - w / 2), Math.round(y - w / 2), w, w, col); } }
+function handle(p, x0, y0, x1, y1, w = 3, wrap = false) {
+  thick(p, x0, y0, x1, y1, w, WOOD.b);
+  const nx = -(y1 - y0), ny = x1 - x0, L = Math.hypot(nx, ny); const ox = nx / L, oy = ny / L;
+  p.line(x0 + ox * (w / 2 - .5), y0 + oy * (w / 2 - .5), x1 + ox * (w / 2 - .5), y1 + oy * (w / 2 - .5), WOOD.d);
+  p.line(x0 - ox * (w / 2 - .5), y0 - oy * (w / 2 - .5), x1 - ox * (w / 2 - .5), y1 - oy * (w / 2 - .5), WOOD.l);
+  for (let k = .15; k < .9; k += .22) p.p(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k, WOOD.g);
+  if (wrap) for (let k = 0; k < 4; k++) { const t = .72 + k * .07; const x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t; thick(p, x, y, x + .01, y, w + 1, k % 2 ? '#4a2c1c' : '#6a4230'); }
+}
+const TOOL32 = {
+  hoe(p, M) {
+    handle(p, 6, 29, 21, 9, 3, true);
+    p.poly([[18, 5], [29, 4], [29, 8], [26, 16], [22, 16], [20, 9]], M.b);
+    p.poly([[18, 5], [29, 4], [29, 6], [20, 7]], M.l);
+    p.line(22, 16, 26, 16, M.e); p.line(26, 16, 28, 9, M.d);
+    p.r(19, 7, 3, 4, M.d); p.p(20, 8, M.l);
+    if (M.pat) { p.p(24, 10, M.pat); p.p(27, 7, M.pat); }
+  },
+  can(p, M) {
+    for (let a = 0; a < 6.3; a += .12) { p.p(8 + Math.cos(a) * 4, 17 + Math.sin(a) * 6, M.d); p.p(8 + Math.cos(a) * 3.4, 17 + Math.sin(a) * 5.4, M.b); }
+    p.r(9, 11, 13, 15, M.b); p.ell(15, 11, 6, 2, M.b); p.ell(15, 26, 6, 2, M.d);
+    p.r(10, 12, 2, 13, M.l); p.r(19, 12, 2, 13, M.d);
+    p.hl(9, 21, 15, M.d); p.hl(9, 21, 21, M.d); p.hl(9, 21, 16, M.l);
+    p.ell(15, 11, 5, 1, '#2a2f38'); if (S && S.water > 0) p.ell(15, 11, 4, 1, '#5aa8ff');
+    thick(p, 21, 21, 28, 11, 2, M.b); p.line(21, 20, 28, 10, M.l);
+    p.ell(29, 9, 2, 3, M.d); p.p(29, 8, M.e); p.p(30, 10, '#2a2f38'); p.p(29, 10, '#2a2f38');
+    for (let k = 0; k < 4; k++) p.p(5 + k, 12 - (k % 2), M.d);
+    if (M.pat) { p.p(13, 23, M.pat); p.p(17, 13, M.pat); }
+  },
+  axe(p, M) {
+    handle(p, 8, 30, 19, 7, 3, true);
+    p.poly([[15, 5], [21, 3], [27, 1], [31, 8], [29, 16], [23, 13], [18, 10]], M.b);
+    p.poly([[27, 1], [31, 8], [29, 16], [28, 15], [29, 8], [26, 3]], M.e);
+    p.poly([[15, 5], [21, 3], [22, 6], [17, 8]], M.l);
+    p.line(18, 10, 23, 13, M.d); p.r(14, 4, 4, 5, M.d); p.p(15, 5, M.l);
+    if (M.pat) { p.p(22, 9, M.pat); p.p(25, 6, M.pat); }
+  },
+  pick(p, M) {
+    handle(p, 9, 30, 18, 10, 3, true);
+    const arc = []; for (let k = 0; k <= 20; k++) { const t = k / 20; arc.push([3 + t * 26, 10 - Math.sin(t * Math.PI) * 6]); }
+    for (const [x, y] of arc) thick(p, x, y, x, y, 3, M.b);
+    for (const [x, y] of arc) p.p(x, y - 1, M.l);
+    p.poly([[1, 13], [4, 9], [5, 12]], M.d); p.poly([[31, 12], [28, 8], [27, 11]], M.d);
+    p.p(2, 12, M.e); p.p(30, 11, M.e);
+    p.r(15, 3, 5, 6, M.d); p.r(16, 4, 2, 2, M.l);
+    if (M.pat) { p.p(8, 7, M.pat); p.p(24, 6, M.pat); }
+  },
+  scythe(p, M) {
+    handle(p, 10, 31, 16, 3, 3, false);
+    thick(p, 9, 22, 13, 22, 2, WOOD.d);
+    const pts = []; for (let k = 0; k <= 22; k++) { const t = k / 22; pts.push([16 - t * 15, 3 + Math.sin(t * Math.PI * .9) * 6 - t * 1]); }
+    for (let k = 0; k < pts.length; k++) { const [x, y] = pts[k]; const w = Math.max(1, Math.round(3 - k / 10)); thick(p, x, y, x, y, w, M.b); p.p(x, y + w / 2, M.e); p.p(x, y - w / 2, M.d); }
+    p.r(14, 2, 4, 4, M.d);
+    if (M.pat) { p.p(8, 8, M.pat); p.p(5, 7, '#8a4a20'); p.p(11, 7, '#8a4a20'); }
+  },
+  rod(p, M) {
+    thick(p, 5, 30, 27, 4, 2, '#6a4a2a'); p.line(5, 29, 27, 3, '#a87a4a');
+    thick(p, 5, 30, 10, 24, 4, '#c8a070'); for (let k = 0; k < 4; k++) p.p(6 + k, 28 - k, '#8a6a40');
+    p.circ(11, 24, 3, M.d); p.circ(11, 24, 2, M.b); p.p(10, 23, M.l); p.line(11, 24, 14, 26, '#333');
+    for (const t of [.45, .65, .85]) { const x = 5 + 22 * t, y = 30 - 26 * t; p.ring(x, y - 1, 1, M.l); }
+    p.line(27, 4, 28, 18, '#e8e8e8');
+    p.circ(28, 20, 2, '#e02030'); p.hl(26, 30, 20, '#ffffff'); p.p(28, 18, '#fff');
+  },
+};
+function swordIcon(p, [blade = '#c8d0d8', hilt = '#7a4a24', style = 0]) {
+  const B = { b: blade, l: shade(blade, .45), d: shade(blade, -.35), e: '#ffffff' };
+  const grip = (x0, y0, x1, y1) => { thick(p, x0, y0, x1, y1, 3, hilt); for (let k = 0; k < 4; k++) { const t = k / 3; p.p(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, shade(hilt, .3)); } };
+  if (style === 5) { // перо Автора
+    const pts = []; for (let k = 0; k <= 20; k++) { const t = k / 20; pts.push([6 + t * 22, 26 - t * 23 + Math.sin(t * 3) * 2]); }
+    for (let k = 4; k < pts.length; k++) { const [x, y] = pts[k], w = Math.sin(k / 20 * Math.PI) * 7; p.line(x, y, x - w * .7, y - w * .2, k % 2 ? '#f0eadc' : '#d8d0c0'); p.line(x, y, x + w * .2, y + w * .7, k % 2 ? '#e0d8c8' : '#c8c0b0'); }
+    p.line(4, 29, 28, 3, '#2a2a2a'); p.line(3, 30, 6, 27, '#111'); p.p(3, 30, '#c00');
+    return;
+  }
+  if (style === 1) { // тесак
+    p.poly([[9, 21], [24, 3], [30, 6], [16, 25]], B.b); p.line(24, 3, 30, 6, B.e); p.line(16, 25, 30, 6, B.e);
+    p.line(9, 21, 24, 3, B.d); p.circ(25, 7, 1, '#3a3a3a');
+    grip(4, 27, 9, 22); p.r(7, 20, 5, 5, '#5a4a3a');
+    return;
+  }
+  const tip = style === 4 ? [17, 14] : [28, 3];
+  // клинок
+  if (style === 3) {
+    const pts = []; for (let k = 0; k <= 18; k++) { const t = k / 18; pts.push([10 + t * 18 + Math.sin(t * Math.PI) * 2, 21 - t * 18 - Math.sin(t * Math.PI) * 2]); }
+    for (let k = 0; k < pts.length; k++) { const [x, y] = pts[k]; const w = k < 15 ? 4 : 2; thick(p, x, y, x, y, w, B.b); p.p(x + 1, y + 1, B.e); p.p(x - 1, y - 1, B.d); if (k % 4 === 2) p.p(x, y, '#7ad8ff'); }
+  } else {
+    const w = style === 2 ? 2 : 3;
+    thick(p, 10, 21, tip[0], tip[1], w, B.b);
+    p.line(10, 21, tip[0], tip[1], B.d);
+    p.line(11, 22, tip[0] + 1, tip[1] + 1, B.e);
+    if (style !== 2) p.line(10, 20, tip[0] - 1, tip[1], B.l);
+    if (style === 4) { p.p(tip[0] + 1, tip[1] - 1, B.b); p.p(tip[0] + 2, tip[1] + 1, B.d); p.p(tip[0], tip[1] - 2, B.l); }
+    else p.p(tip[0] + 1, tip[1] - 1, B.e);
+  }
+  // гарда
+  if (style === 2) { p.ring(10, 22, 3, '#d8a030'); p.ring(10, 22, 2, '#a07018'); }
+  else { thick(p, 6, 17, 14, 25, 2, '#8a6a3a'); p.line(6, 17, 14, 25, '#d0a860'); p.p(6, 17, '#f2d080'); p.p(14, 25, '#f2d080'); }
+  grip(4, 27, 9, 22);
+  p.circ(3, 28, 2, style === 3 ? '#4a8aff' : '#c02040'); p.p(2, 27, '#fff');
+}
+// иконка 32x32: инструменты и оружие — детальные; остальное — сглаженный апскейл 16→32 + объём + цветной контур
 function itemIconCanvas(id, of) {
   const it0 = ITEMS[id];
   if (it0 && it0.type === 'tool' && (of === undefined || of === null)) of = (S && S.tools && S.tools[it0.tool]) || 0;
   if (it0 && it0.type === 'estus' && (of === undefined || of === null)) of = (S && S.estus > 0) ? 1 : 0;
-  return spr(`icon:${id}:${of === undefined || of === null ? '' : of}`, () => {
-    const it = ITEMS[id]; const p = new PX(16, 16);
-    if (!it) { p.r(4, 4, 8, 8, '#f0f'); return p.done(); }
+  const wet = id === 'can' && S && S.water > 0 ? 'w' : '';
+  return spr(`icon:${id}:${of === undefined || of === null ? '' : of}${wet}`, () => {
+    const it = ITEMS[id];
+    if (!it) { const p = new PX(32, 32); p.r(8, 8, 16, 16, '#f0f'); return p.done(); }
     let ic = it.ic || ['stone'];
     if (it.type === 'tool') ic = ['tool', it.tool, of | 0];
     if (it.type === 'estus') ic = ['estus', of | 0];
-    if (it.artisan && of && ITEMS[of]) { // вино/джем — цвет исходника
-      const col = ITEMS[of].col || '#a03050';
-      ic = [ic[0], col];
+    if (it.artisan && of && ITEMS[of]) ic = [ic[0], ITEMS[of].col || '#a03050'];
+    if (ic[0] === 'tool' && TOOL32[ic[1]]) {
+      const p = new PX(32, 32); TOOL32[ic[1]](p, METAL[ic[2] || 0]); p.selOutline(.7, false); return p.done();
     }
+    if (ic[0] === 'sword') { const p = new PX(32, 32); swordIcon(p, ic.slice(1)); p.selOutline(.7, false); return p.done(); }
+    const p = new PX(16, 16);
     const fn = ICON[ic[0]]; if (fn) fn(p, ic.slice(1));
-    if (p._img) return p.c;
-    p.outline(it.type === 'tool' || it.type === 'weapon' ? '#1a1010' : '#2a1a10');
-    return p.done();
+    if (p._img) { const big = mkCanvas(32, 32), g = big.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(p.c, 0, 0, 32, 32); return big; }
+    const q = p.scale2x(); q.rim(.2, .22); q.selOutline(.68, false);
+    return q.done();
   });
 }
 function iconURL(id, of) {
   const it0 = ITEMS[id];
   if (it0 && it0.type === 'tool' && (of === undefined || of === null)) of = (S && S.tools && S.tools[it0.tool]) || 0;
   if (it0 && it0.type === 'estus' && (of === undefined || of === null)) of = (S && S.estus > 0) ? 1 : 0;
-  return dataURL(`i:${id}:${of === undefined || of === null ? '' : of}`, () => { const c = itemIconCanvas(id, of); const o = mkCanvas(32, 32); const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, 32, 32); return o; }); }
+  const wet = id === 'can' && S && S.water > 0 ? 'w' : '';
+  return dataURL(`i:${id}:${of === undefined || of === null ? '' : of}${wet}`, () => itemIconCanvas(id, of));
+}
 function uiIconURL(kind) {
   return dataURL('ui:' + kind, () => {
     const p = new PX(16, 16);
-    if (kind === 'hand') { p.r(5, 6, 7, 8, '#f2c6a0'); for (let k = 0; k < 4; k++) p.r(5 + k * 2, 2 + (k % 2), 1, 5, '#f2c6a0'); p.r(3, 8, 2, 4, '#f2c6a0'); p.outline('#3a1a0a'); }
-    if (kind === 'heart') { ICON.heart(p, ['#d02030']); p.outline('#3a0a0a'); }
-    return p.done().toDataURL();
+    switch (kind) {
+      case 'hand': p.r(5, 7, 7, 7, '#f2c6a0'); for (let k = 0; k < 4; k++) p.r(5 + k * 2, 2 + (k % 2 ? 0 : 1), 2, 6, '#f2c6a0'); p.r(2, 8, 3, 2, '#f2c6a0'); p.r(3, 9, 3, 3, '#f2c6a0'); p.r(6, 13, 5, 2, '#e0a880'); break;
+      case 'heart': ICON.heart(p, ['#e02a3a']); p.clear(7, 2); p.clear(8, 2); p.clear(8, 1); p.clear(7, 1); break;
+      case 'bolt': p.poly([[9, 0], [3, 9], [7, 9], [5, 16], [13, 6], [9, 6], [11, 0]], '#f2e040'); break;
+      case 'eye': p.ell(8, 8, 7, 4, '#f4ecf8'); p.circ(8, 8, 3, '#8a4ad0'); p.circ(8, 8, 1, '#1a0a20'); p.p(7, 7, '#fff'); break;
+      case 'coin': p.circ(8, 8, 6, '#f2c430'); p.circ(8, 8, 4, '#d8a020'); p.vl(8, 5, 11, '#fff2a0'); break;
+      case 'soul': p.ell(8, 9, 5, 6, '#9adfff'); p.poly([[4, 8], [8, 0], [12, 8]], '#9adfff'); p.ell(8, 10, 3, 3, '#e8fbff'); break;
+      case 'estus': ICON.estus(p, [1]); break;
+      case 'roll': p.ring(8, 8, 6, '#f7ecd4'); p.ring(8, 8, 5, '#f7ecd4'); p.poly([[11, 0], [15, 4], [10, 6]], '#f7ecd4'); p.clear(13, 8); p.clear(14, 8); break;
+    }
+    const q = p.scale2x(); q.rim(.18, .2); q.selOutline(.7);
+    return q.done();
   });
 }

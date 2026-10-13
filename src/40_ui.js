@@ -36,7 +36,11 @@ function itemInfo(st) {
 
 const UI = {
   chain: Promise.resolve(), dlg: null, typing: null, openT: 0, panelOpen: false, screenOpen: false, notesEl: null,
-  init() { this.notesEl = $('#notes'); },
+  init() {
+    this.notesEl = $('#notes');
+    const ic = { '#ic-hp': 'heart', '#ic-en': 'bolt', '#ic-sn': 'eye', '#ic-soul': 'soul', '#ic-estus': 'estus', '#ic-gold': 'coin', '#b-act-ico': 'hand', '#b-roll-ico': 'roll' };
+    for (const k in ic) { const e = $(k); if (e) e.src = uiIconURL(ic[k]); }
+  },
   layout() {
     const w = innerWidth; const slot = Math.max(26, Math.min(44, Math.floor((w - 24) / 12) - 2));
     document.documentElement.style.setProperty('--slot', slot + 'px');
@@ -58,8 +62,8 @@ const UI = {
     const dateTxt = `${WEEKDAYS[(S.absDay - 1) % 7]}. ${S.day} ${SEASONS_GEN[S.season]}`;
     if (this._d !== dateTxt) { this._d = dateTxt; $('#c-date').textContent = dateTxt; }
     const tt = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${wIcon}`; if (this._t !== tt) { this._t = tt; $('#c-time').textContent = tt; }
-    const g = U.fmt(S.money) + 'з'; if (this._g !== g) { this._g = g; $('#c-gold').textContent = g; }
-    const so = `Души: ${U.fmt(S.souls)} · Эстус: ${S.estus}/${S.estusMax}`; if (this._s !== so) { this._s = so; $('#souls').textContent = so; }
+    const g = U.fmt(S.money) + ' з'; if (this._g !== g) { this._g = g; $('#v-gold').textContent = g; }
+    const so = U.fmt(S.souls), es = `${S.estus}/${S.estusMax}`; if (this._s !== so + es) { this._s = so + es; $('#v-souls').textContent = so; $('#v-estus').textContent = es; }
     document.documentElement.style.setProperty('--gs', String(U.clamp((0.5 - S.sanity / S.maxSanity) * 2, 0, .85).toFixed(2)));
     const st = selStack(); const key = st ? st.id + ':' + (st.id === 'estus' ? S.estus : '') + ':' + (S.tools[ITEMS[st.id] && ITEMS[st.id].tool] || 0) : 'none';
     if (this._u !== key) { this._u = key; $('#b-use-ico').src = st ? iconURL(st.id, st.of) : uiIconURL('hand'); }
@@ -77,7 +81,7 @@ const UI = {
     const n = h('div', { class: 'note ' + cls }, icon ? h('img', { src: iconURL(icon), alt: '' }) : null, h('span', null, text));
     if (whisper) n.style.fontStyle = 'italic';
     this.notesEl.prepend(n);
-    while (this.notesEl.children.length > 5) this.notesEl.lastChild.remove();
+    while (this.notesEl.children.length > 4) this.notesEl.lastChild.remove();
     setTimeout(() => { n.style.transition = 'opacity .6s'; n.style.opacity = '0'; setTimeout(() => n.remove(), 700); }, whisper ? 2500 : 3800);
   },
   pickNote(id, n, q, of) {
@@ -86,7 +90,7 @@ const UI = {
     if (last && last.dataset.pick === id + (of || '') && Date.now() - last.dataset.t < 2500) { last.dataset.n = +last.dataset.n + n; last.querySelector('span').textContent = `+${last.dataset.n} ${name}`; last.dataset.t = Date.now(); return; }
     const el = h('div', { class: 'note' }, h('img', { src: iconURL(id, of), alt: '' }), h('span', null, `+${n} ${name}`));
     el.dataset.pick = id + (of || ''); el.dataset.n = n; el.dataset.t = Date.now();
-    this.notesEl.prepend(el); while (this.notesEl.children.length > 5) this.notesEl.lastChild.remove();
+    this.notesEl.prepend(el); while (this.notesEl.children.length > 4) this.notesEl.lastChild.remove();
     setTimeout(() => { el.style.transition = 'opacity .6s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 700); }, 2600);
   },
   locName(name) { const e = $('#locname'); e.textContent = name; e.classList.add('on'); clearTimeout(this._ln); this._ln = setTimeout(() => e.classList.remove('on'), 2200); },
@@ -101,6 +105,13 @@ const UI = {
     if (this._boss) { const e = $('#bosshp'); if (e) e.style.width = Math.max(0, this._boss.hp / this._boss.maxHp * 100) + '%'; }
     const d = this.dlg; if (!d) return;
     this.openT += dt;
+    if (this.porWho && !$('#dlg-por').hidden) {
+      this.porT += dt;
+      const talk = d.typing && Math.floor(this.porT * 9) % 2 === 1;
+      const blink = (this.porT % 3.4) > 3.25;
+      const key = (talk ? 1 : 0) + (blink ? 2 : 0);
+      if (key !== this._porKey) { this._porKey = key; this.drawPortrait(talk, blink); }
+    }
     if (d.typing) {
       d.shown += dt * (d.creep ? 30 : 48) * (Input.down.use || Input.down.act ? 3 : 1);
       const n = Math.floor(d.shown);
@@ -122,6 +133,10 @@ const UI = {
       } else if (go) this.advance();
     }
   },
+  drawPortrait(talk, blink) {
+    const cv = $('#dlg-cv'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
+    const c = portrait(this.porWho, this.porEmo, talk, blink); g.drawImage(c, 0, 0, c.width, c.height, 0, 0, cv.width, cv.height);
+  },
   advance() {
     const d = this.dlg; if (!d) return;
     if (d.typing) { d.shown = d.full.length; return; }
@@ -132,11 +147,10 @@ const UI = {
   closeDlg() { this.dlg = null; $('#dlg').hidden = true; Input.clear(); },
   _dialog(o) {
     return new Promise(res => {
-      const box = $('#dlg'); box.hidden = false; box.className = o.narr ? 'narr' : (o.creep ? 'creepy' : '');
+      const box = $('#dlg'); box.hidden = false; box.className = 'frame' + (o.narr ? ' narr' : (o.creep ? ' creepy' : ''));
       const por = $('#dlg-por');
       if (o.who && !o.narr) {
-        por.hidden = false; const cv = $('#dlg-cv'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 64, 64);
-        g.drawImage(portrait(o.who, o.emo || 'neutral'), 0, 0);
+        por.hidden = false; this.porWho = o.who; this.porEmo = o.emo || 'neutral'; this.porT = 0; this.drawPortrait(false, false);
       } else por.hidden = true;
       const name = o.narr ? '' : (o.who ? (o.who === 'marysue' ? 'Мэри Сью' : o.who === 'zhmur' ? 'Жмуримо' : o.who === 'grandpa' ? 'Дед' : o.who === 'fairy' ? 'Фея Листик' : (NPCS[o.who] ? (NPCS[o.who].short || NPCS[o.who].n) : o.who)) : '');
       $('#dlg-name').textContent = name;
@@ -187,7 +201,7 @@ const UI = {
   async daySummary(lines, total, info) {
     return this.screen((sc, close) => {
       sc.style.background = 'var(--ink)';
-      const box = h('div', { class: 'summary' }, h('h2', null, `${S.day} ${SEASONS_GEN[S.season]}, год ${S.year}`));
+      const box = h('div', { class: 'summary frame' }, h('h2', null, `${S.day} ${SEASONS_GEN[S.season]}, год ${S.year}`));
       if (lines.length) { box.append(h('div', { style: 'font-weight:700;margin-bottom:4px' }, 'Отгружено:')); const list = h('div', { class: 'list', style: 'max-height:36vh;overflow:auto' }); for (const [n, c, v, id, of] of lines) list.append(h('div', { class: 'li' }, h('img', { src: iconURL(id, of), alt: '' }), h('div', { class: 't' }, h('b', null, n), h('small', null, '×' + c)), h('div', { class: 'p' }, v + 'з'))); box.append(list); }
       else box.append(h('div', { class: 'muted' }, 'Сегодня ничего не отгружено.'));
       box.append(h('div', { class: 'tot' }, `Итого: +${U.fmt(total)}з`));
@@ -226,7 +240,7 @@ const UI = {
   /* ---------- панели ---------- */
   panel(title, build, tabs, tabIdx = 0) {
     const pn = $('#panel'); pn.innerHTML = ''; pn.hidden = false; this.panelOpen = true; Input.clear();
-    const win = h('div', { class: 'win', role: 'dialog' });
+    const win = h('div', { class: 'win frame', role: 'dialog' });
     const head = h('div', { class: 'win-h' }, h('h2', null, title), h('button', { class: 'x', 'aria-label': 'Закрыть', onclick: () => this.closePanel() }, '✕'));
     win.append(head);
     const body = h('div', { class: 'win-b' });
@@ -306,8 +320,7 @@ const UI = {
       if (!r || !r.met) { list.append(h('div', { class: 'li dis' }, h('div', { class: 't' }, h('b', null, '???'), h('small', null, 'Ещё не знакомы')))); continue; }
       const hv = hearts(id); const max = def.romance ? 10 : 10;
       const hs = '♥'.repeat(hv) + '♡'.repeat(Math.max(0, max - hv));
-      const cv = mkCanvas(64, 64); cv.getContext('2d').drawImage(portrait(id, hv >= 6 && def.romance ? 'blush' : 'neutral'), 0, 0);
-      const img = h('img', { src: cv.toDataURL(), alt: '', style: 'width:40px;height:40px;image-rendering:pixelated;background:#e9c98a;border-radius:3px' });
+      const img = h('img', { src: portrait(id, hv >= 6 && def.romance ? 'blush' : 'neutral').toDataURL(), alt: '', style: 'width:52px;height:52px;background:#e9c98a;border-radius:6px;border:2px solid #6b4a2a' });
       const status = S.spouse === id ? ' · супруг(а)' : S.dating === id ? ' · встречаетесь' : S.fiance === id ? ' · помолвка' : '';
       list.append(h('div', { class: 'li' }, img, h('div', { class: 't' }, h('b', null, (def.short || def.n) + status), h('small', null, def.title + (def.bday ? ` · ДР: ${def.bday[1]} ${SEASONS_GEN[def.bday[0]]}` : '')), h('span', { class: 'hearts' }, hs), h('small', null, `${r.talked ? 'Говорили сегодня' : 'Не говорили сегодня'} · Подарков за неделю: ${r.week}/2${def.romance ? ' · романтика' : ''}`))));
     }

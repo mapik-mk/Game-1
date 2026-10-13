@@ -86,6 +86,45 @@ class PX {
       const o = fn(x, y, [d[i], d[i + 1], d[i + 2], d[i + 3]]); if (o) { d[i] = o[0]; d[i + 1] = o[1]; d[i + 2] = o[2]; d[i + 3] = o[3]; }
     }
   }
+  // цветной контур: прозрачный пиксель рядом с формой получает затемнённый цвет соседа (современный pixel-art)
+  selOutline(k = .55, diag = false, minA = 128) {
+    const w = this.w, h = this.h, src = new Uint8ClampedArray(this.d), d = this.d;
+    const nb = diag ? [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [1, -1], [-1, 1]] : [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; if (src[i + 3]) continue;
+      let r = 0, g = 0, b = 0, n = 0;
+      for (const [dx, dy] of nb) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue; const j = (Y * w + X) * 4; if (src[j + 3] >= minA) { r += src[j]; g += src[j + 1]; b += src[j + 2]; n++; } }
+      if (!n) continue;
+      d[i] = r / n * (1 - k) * .9; d[i + 1] = g / n * (1 - k) * .8; d[i + 2] = b / n * (1 - k) * .85; d[i + 3] = 255;
+    }
+  }
+  // объём: светлый край сверху-слева, тень снизу-справа
+  rim(light = .22, dark = .28) {
+    const w = this.w, h = this.h, src = new Uint8ClampedArray(this.d), d = this.d;
+    const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : src[(y * w + x) * 4 + 3];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; if (!src[i + 3]) continue;
+      const top = !A(x, y - 1) || !A(x - 1, y), bot = !A(x, y + 1) || !A(x + 1, y);
+      if (top && !bot) for (let c = 0; c < 3; c++) d[i + c] = d[i + c] + (255 - d[i + c]) * light;
+      else if (bot && !top) for (let c = 0; c < 3; c++) d[i + c] = d[i + c] * (1 - dark);
+    }
+  }
+  // Scale2x (EPX): сглаженное удвоение пиксель-арта
+  scale2x() {
+    const w = this.w, h = this.h, s = this.d, o = new PX(w * 2, h * 2), d = o.d;
+    const px = (x, y) => { x = U.clamp(x, 0, w - 1); y = U.clamp(y, 0, h - 1); const i = (y * w + x) * 4; return (s[i] << 24 | s[i + 1] << 16 | s[i + 2] << 8 | s[i + 3]) >>> 0; };
+    const put = (x, y, v) => { const i = (y * w * 2 + x) * 4; d[i] = v >>> 24; d[i + 1] = (v >>> 16) & 255; d[i + 2] = (v >>> 8) & 255; d[i + 3] = v & 255; };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const P_ = px(x, y), A = px(x, y - 1), B = px(x + 1, y), C = px(x - 1, y), D = px(x, y + 1);
+      let e1 = P_, e2 = P_, e3 = P_, e4 = P_;
+      if (C === A && C !== D && A !== B) e1 = A;
+      if (A === B && A !== C && B !== D) e2 = B;
+      if (D === C && D !== B && C !== A) e3 = C;
+      if (B === D && B !== A && D !== C) e4 = D;
+      put(x * 2, y * 2, e1); put(x * 2 + 1, y * 2, e2); put(x * 2, y * 2 + 1, e3); put(x * 2 + 1, y * 2 + 1, e4);
+    }
+    return o;
+  }
   blit(src, dx, dy) { // копировать другой PX (с альфой)
     for (let y = 0; y < src.h; y++) for (let x = 0; x < src.w; x++) {
       const i = (y * src.w + x) * 4; const a = src.d[i + 3]; if (!a) continue;

@@ -3,147 +3,185 @@
    ============================================================ */
 const OUTLINE = '#1d1214';
 
-function drawChar(L, dir, frame) {
-  const key = `ch:${L.id || JSON.stringify(L)}:${dir}:${frame}`;
+// pose: { step: 0..3 (шаг), br: 0/1 (дыхание), bl: 0/1 (моргание), arm: ''|'up'|'fwd'|'hold' }
+function drawChar(L, dir, pose = {}) {
+  if (typeof pose === 'number') pose = { step: [0, 1, 0, 3][pose] || 0 };
+  const step = pose.step | 0, br = pose.br | 0, bl = pose.bl | 0, arm = pose.arm || '';
+  const key = `ch:${L.id || JSON.stringify(L)}:${dir}:${step}:${br}:${bl}:${arm}`;
   return spr(key, () => {
-    const p = new PX(16, 32);
-    const sk = L.skin || '#f2c6a0', skD = shade(sk, -.18), hr = L.hair || '#3a2a1a', hrD = shade(hr, -.3), hrL = shade(hr, .25);
-    const top = L.top || '#4a6a9a', topD = shade(top, -.25), bot = L.bottom || '#3a3a4a', shoe = L.shoes || '#2a1a10';
+    const sk = L.skin || '#f2c6a0', skD = shade(sk, -.16), skDD = shade(sk, -.3), skL = shade(sk, .15);
+    const hr = L.hair || '#3a2a1a', hrD = shade(hr, -.32), hrL = shade(hr, .3);
+    const top = L.top || '#4a6a9a', topD = shade(top, -.28), topL = shade(top, .2);
+    const bot = L.bottom || '#3a3a4a', botD = shade(bot, -.25), botL = shade(bot, .15), shoe = L.shoes || '#2a1a10';
     const fem = !!L.fem, st = L.hairStyle || 'short', ghost = !!L.ghost;
-    const step = frame === 1 ? 1 : frame === 2 ? 2 : 0;
     const longHair = ['long', 'veil', 'twintail', 'wavy'].includes(st);
-
+    const bs = L.bottomStyle || 'pants';
+    const sl = L.sleeve === 'none' ? sk : top, slD = L.sleeve === 'none' ? skD : topD;
+    const lo = new PX(16, 32), up = new PX(16, 32);
+    const dy = (step === 1 || step === 3 ? -1 : 0) + (br ? 1 : 0);
+    const lift = step === 1 ? 'l' : step === 3 ? 'r' : '';
+    const armSw = arm ? 0 : (step === 1 ? 1 : step === 3 ? -1 : 0);
     if (dir === 'down' || dir === 'up') {
       const back = dir === 'up';
-      // волосы сзади (длинные)
-      if (longHair && !back) { p.r(3, 9, 10, 13, hrD); }
-      if (st === 'twintail') { p.r(1, 8, 2, 13, hr); p.r(13, 8, 2, 13, hr); p.p(1, 21, hrD); p.p(14, 21, hrD); }
-      // туловище
-      const armSw = step === 1 ? -1 : step === 2 ? 1 : 0;
-      const torso = (y, x0, x1, c) => p.hl(x0, x1, y, c);
-      for (let y = 18; y <= 25; y++) {
-        let x0 = 4, x1 = 11;
-        if (fem && (y === 21 || y === 22)) { x0 = 5; x1 = 10; }
-        torso(y, x0, x1, top);
-      }
-      p.vl(11, 18, 25, topD);
-      // вырез
-      if (!back && L.neck === 'v') { p.hl(6, 9, 18, sk); p.hl(7, 8, 19, sk); if (fem) p.p(7, 20, skD); }
-      if (!back && L.neck === 'corset') { p.hl(5, 10, 18, sk); p.p(5, 19, sk); p.p(10, 19, sk); p.p(7, 19, skD); p.p(8, 19, skD); for (let y = 20; y <= 24; y += 2) { p.p(7, y, shade(top, .5)); p.p(8, y + 1, shade(top, .5)); } }
-      if (!back && L.neck === 'bunny') { p.hl(4, 11, 18, sk); p.hl(4, 11, 19, sk); p.p(7, 19, skD); p.p(7, 17, '#fff'); p.p(8, 17, '#fff'); p.p(7, 18, '#d02030'); p.p(8, 18, '#d02030'); }
-      if (!back && L.neck === 'collar') { p.hl(6, 9, 18, '#ffffff'); p.p(7, 19, '#ffffff'); }
-      if (!back && L.neck === 'ruff') { p.hl(3, 12, 17, '#ffffff'); p.hl(4, 11, 18, '#e8e8e8'); }
-      if (L.apron && !back) { p.r(5, 20, 6, 8, L.apron); }
-      if (L.belt) p.hl(fem ? 5 : 4, fem ? 10 : 11, 22, L.belt);
-      // руки
-      const sl = L.sleeve === 'none' ? sk : top;
-      p.vl(3, 18 + Math.max(0, armSw), 23 + armSw, sl); p.vl(12, 18 + Math.max(0, -armSw), 23 - armSw, sl);
-      p.p(3, 24 + armSw, sk); p.p(12, 24 - armSw, sk);
-      if (fem && L.sleeve !== 'none') { p.p(3, 18, sk); p.p(12, 18, sk); }
-      // низ
-      const bs = L.bottomStyle || 'pants';
+      /* --- ноги (нижний слой) --- */
       if (ghost) {
-        for (let y = 24; y < 32; y++) { const a = 255 - (y - 24) * 30; for (let x = 3; x <= 12; x++) if (!(y > 28 && (x + y + frame) % 3 === 0)) p.p(x, y, bot, a); }
-      } else if (bs === 'skirt') {
-        p.hl(4, 11, 24, bot); p.hl(4, 11, 25, bot); p.hl(3, 12, 26, bot); p.hl(3, 12, 27, shade(bot, -.15));
-        const ly = step === 1 ? 1 : 0, ry = step === 2 ? 1 : 0;
-        p.vl(5, 28, 30 - ly, L.legs || sk); p.vl(6, 28, 30 - ly, L.legs || sk); p.vl(9, 28, 30 - ry, L.legs || sk); p.vl(10, 28, 30 - ry, L.legs || sk);
-        p.hl(5, 6, 31 - ly, shoe); p.hl(9, 10, 31 - ry, shoe);
-      } else if (bs === 'long') {
-        for (let y = 24; y < 31; y++) p.hl(y < 27 ? 4 : 3, y < 27 ? 11 : 12, y, y === 30 ? shade(bot, -.2) : bot);
-        p.hl(5, 6, 31, shoe); p.hl(9, 10, 31, shoe);
+        for (let y = 24; y < 32; y++) { const a = 230 - (y - 24) * 30; for (let x = 3; x <= 12; x++) if (!(y > 27 && (x + y + step) % 3 === 0)) lo.p(x, y, bot, Math.max(30, a)); }
+      } else if (bs === 'pants') {
+        const ly = lift === 'l' ? 1 : 0, ry = lift === 'r' ? 1 : 0;
+        for (let y = 24; y <= 30 - ly; y++) { lo.hl(5, 7, y, bot); lo.p(5, y, botL); }
+        for (let y = 24; y <= 30 - ry; y++) { lo.hl(8, 10, y, botD); lo.p(10, y, shade(botD, -.15)); }
+        lo.hl(5, 7, 31 - ly, shoe); lo.p(5, 31 - ly, shade(shoe, .35)); lo.hl(8, 10, 31 - ry, shoe); lo.p(8, 31 - ry, shade(shoe, .35));
       } else {
-        const ly = step === 1 ? 1 : 0, ry = step === 2 ? 1 : 0;
-        p.hl(4, 11, 24, L.belt || bot); p.hl(4, 11, 25, bot);
-        for (let y = 26; y <= 30 - ly; y++) p.hl(5, 7, y, bot);
-        for (let y = 26; y <= 30 - ry; y++) p.hl(8, 10, y, shade(bot, -.12));
-        p.hl(5, 7, 31 - ly, shoe); p.hl(8, 10, 31 - ry, shoe);
+        const legs = L.legs || sk, ly = lift === 'l' ? 1 : 0, ry = lift === 'r' ? 1 : 0;
+        for (let y = 25; y <= 30 - ly; y++) { lo.p(5, y, legs); lo.p(6, y, shade(legs, -.12)); }
+        for (let y = 25; y <= 30 - ry; y++) { lo.p(9, y, legs); lo.p(10, y, shade(legs, -.12)); }
+        lo.hl(5, 6, 31 - ly, shoe); lo.p(5, 31 - ly, shade(shoe, .35)); lo.hl(9, 10, 31 - ry, shoe); lo.p(9, 31 - ry, shade(shoe, .35));
       }
-      // шея и голова
-      p.hl(7, 8, 17, skD);
-      const head = [[6, 5, 10], [7, 4, 11], [8, 3, 12], [9, 3, 12], [10, 3, 12], [11, 3, 12], [12, 3, 12], [13, 3, 12], [14, 3, 12], [15, 4, 11], [16, 5, 10]];
-      for (const [y, a, b] of head) p.hl(a, b, y, sk);
+      /* --- верх (сдвигается при шаге и дыхании) --- */
+      const p = up;
+      if (longHair && !back) { for (let y = 9; y <= 22; y++) p.hl(3, 12, y, (y + (step >> 1)) % 3 ? hrD : shade(hrD, -.15)); }
+      if (st === 'twintail') { const sw = Math.sin(step * 1.6) > 0 ? 1 : 0; for (let y = 8; y <= 21; y++) { p.p(1 - (y > 15 ? sw : 0), y, hr); p.p(2 - (y > 15 ? sw : 0), y, hrD); p.p(13 + (y > 15 ? sw : 0), y, hrD); p.p(14 + (y > 15 ? sw : 0), y, hr); } }
+      // туловище
+      for (let y = 17; y <= 24; y++) {
+        let x0 = 4, x1 = 11; if (fem && (y === 21 || y === 22)) { x0 = 5; x1 = 10; } if (y === 17) { x0 = 5; x1 = 10; }
+        p.hl(x0, x1, y, top); p.p(x0, y, topL); p.p(x1, y, topD);
+      }
+      p.hl(5, 10, 24, topD);
       if (!back) {
-        // глаза
-        const ec = L.eyes || '#3a2a5a';
-        if (L.eyeStyle === 'void') { p.r(5, 11, 2, 2, '#000'); p.r(9, 11, 2, 2, '#000'); p.p(6, 12, '#f00'); p.p(9, 12, '#f00'); }
-        else if (fem) { p.hl(5, 6, 11, '#1b1020'); p.hl(9, 10, 11, '#1b1020'); p.p(5, 12, ec); p.p(6, 12, shade(ec, .3)); p.p(9, 12, ec); p.p(10, 12, shade(ec, .3)); p.p(4, 11, '#1b1020'); p.p(11, 11, '#1b1020'); }
-        else { p.vl(5, 11, 12, '#1b1020'); p.vl(10, 11, 12, '#1b1020'); }
-        if (L.glasses) { p.hl(4, 7, 10, '#555'); p.hl(8, 11, 10, '#555'); p.p(4, 13, '#555'); p.p(7, 13, '#555'); p.p(8, 13, '#555'); p.p(11, 13, '#555'); }
-        if (fem) { p.p(4, 13, '#f0909a'); p.p(11, 13, '#f0909a'); }
-        p.hl(7, 8, 14, L.lips || skD);
-        if (L.beard) { p.hl(4, 11, 15, L.beard); p.hl(5, 10, 16, L.beard); p.hl(6, 9, 17, L.beard); p.hl(6, 9, 14, L.beard); p.hl(7, 8, 14, shade(L.beard, -.3)); }
-        if (L.mustache) { p.hl(5, 10, 14, L.mustache); p.p(4, 15, L.mustache); p.p(11, 15, L.mustache); }
-        if (L.clownface) { p.p(5, 13, '#000'); p.p(10, 13, '#000'); p.hl(6, 9, 15, '#d02030'); }
+        if (L.neck === 'v') { p.hl(6, 9, 17, sk); p.hl(7, 8, 18, sk); if (fem) { p.p(7, 19, skD); p.p(6, 19, topD); p.p(9, 19, topD); } }
+        else if (L.neck === 'corset') { p.hl(5, 10, 17, sk); p.hl(5, 10, 18, sk); p.p(5, 19, sk); p.p(10, 19, sk); p.p(7, 19, skDD); p.p(8, 19, skD); p.p(6, 18, skL); p.p(9, 18, skL); for (let y = 20; y <= 23; y++) p.p(7 + (y % 2), y, shade(top, .55)); }
+        else if (L.neck === 'bunny') { p.hl(4, 11, 17, sk); p.hl(4, 11, 18, sk); p.p(7, 18, skDD); p.p(6, 18, skL); p.p(9, 18, skL); p.hl(4, 11, 19, shade(top, .1)); p.p(7, 16, '#fff'); p.p(8, 16, '#fff'); p.p(7, 17, '#d02030'); p.p(8, 17, '#d02030'); }
+        else if (L.neck === 'collar') { p.hl(6, 9, 17, '#ffffff'); p.p(7, 18, '#ffffff'); }
+        else if (L.neck === 'ruff') { p.hl(3, 12, 16, '#ffffff'); p.hl(4, 11, 17, '#e8e8e8'); p.p(5, 16, '#d8d8e0'); p.p(9, 16, '#d8d8e0'); }
+        else { p.hl(6, 9, 17, shade(top, .3)); p.p(7, 18, skD); p.p(8, 18, skD); p.p(7, 20, topD); p.p(7, 22, topD); }
+        if (L.apron) { p.r(5, 19, 6, 6, L.apron); p.vl(5, 19, 24, shade(L.apron, .2)); p.hl(5, 10, 19, shade(L.apron, -.2)); }
+      }
+      if (L.belt && bs === 'pants') { p.hl(4, 11, 23, L.belt); p.p(7, 23, '#d8b040'); }
+      // юбка / платье
+      if (!ghost && bs === 'skirt') { for (let y = 23; y <= 27; y++) { const x0 = y < 25 ? 4 : 3, x1 = y < 25 ? 11 : 12; p.hl(x0, x1, y, bot); p.p(x0, y, botL); p.p(x1, y, botD); } for (const x of [5, 8, 10]) p.vl(x, 25, 27, botD); p.hl(3, 12, 27, botD); }
+      if (!ghost && bs === 'long') { for (let y = 23; y <= 30; y++) { const x0 = y < 26 ? 4 : 3, x1 = y < 26 ? 11 : 12; p.hl(x0, x1, y, bot); p.p(x0, y, botL); p.p(x1, y, botD); } for (const x of [5, 8, 10]) p.vl(x, 26, 30, botD); p.hl(3, 12, 30, botD); }
+      if (ghost) { for (let y = 23; y <= 24; y++) p.hl(4, 11, y, bot); }
+      // руки
+      if (arm === 'up' || arm === 'hold') {
+        const hy = arm === 'hold' ? 4 : 9;
+        for (let y = hy + 1; y <= 19; y++) { p.p(3, y, sl); p.p(12, y, slD); }
+        p.r(arm === 'hold' ? 4 : 3, hy, 2, 2, sk); p.r(arm === 'hold' ? 10 : 11, hy, 2, 2, sk);
+      } else if (arm === 'fwd') {
+        p.vl(3, 18, 21, sl); p.vl(12, 18, 21, slD); p.p(4, 22, sl); p.p(11, 22, slD);
+        p.r(6, 22, 4, 2, sk); p.hl(6, 9, 23, skD);
+      } else {
+        p.vl(3, 18 + Math.max(0, armSw), 23 + armSw, sl); p.vl(12, 18 + Math.max(0, -armSw), 23 - armSw, slD);
+        p.p(3, 24 + armSw, sk); p.p(12, 24 - armSw, skD);
+        if (fem && L.sleeve !== 'none') { p.p(3, 18, sk); p.p(12, 18, skD); }
+      }
+      // голова
+      p.hl(7, 8, 16, skD);
+      const head = [[5, 5, 10], [6, 4, 11], [7, 3, 12], [8, 3, 12], [9, 3, 12], [10, 3, 12], [11, 3, 12], [12, 3, 12], [13, 3, 12], [14, 4, 11], [15, 5, 10]];
+      for (const [y, a, b] of head) { p.hl(a, b, y, sk); p.p(b, y, skD); }
+      p.hl(6, 9, 15, skD);
+      if (!back) {
+        const ec = L.eyes || '#3a2a5a', lash = '#1b1020';
+        if (L.eyeStyle === 'void') { p.r(5, 10, 2, 2, '#000'); p.r(9, 10, 2, 2, '#000'); p.p(6, 11, '#f00'); p.p(9, 11, '#f00'); }
+        else if (bl) { p.hl(5, 6, 11, lash); p.hl(9, 10, 11, lash); }
+        else if (fem) { p.hl(5, 6, 10, lash); p.hl(9, 10, 10, lash); p.p(4, 10, lash); p.p(11, 10, lash); p.p(5, 11, ec); p.p(6, 11, '#ffffff'); p.p(9, 11, ec); p.p(10, 11, '#ffffff'); p.p(5, 12, shade(ec, .35)); p.p(9, 12, shade(ec, .35)); }
+        else { p.vl(5, 10, 11, lash); p.vl(10, 10, 11, lash); p.p(5, 10, '#ffffff'); p.p(10, 10, '#ffffff'); p.p(5, 10, lash); }
+        if (L.glasses) { p.hl(4, 7, 9, '#555'); p.hl(8, 11, 9, '#555'); p.p(4, 12, '#555'); p.p(7, 12, '#555'); p.p(8, 12, '#555'); p.p(11, 12, '#555'); }
+        p.p(4, 12, fem ? '#f08a98' : skD); p.p(11, 12, fem ? '#f08a98' : skD);
+        p.hl(7, 8, 13, L.lips || skDD);
+        if (L.beard) { p.hl(4, 11, 14, L.beard); p.hl(5, 10, 15, L.beard); p.hl(6, 9, 16, L.beard); p.hl(6, 9, 13, L.beard); p.hl(7, 8, 13, shade(L.beard, -.3)); p.p(4, 14, shade(L.beard, .2)); }
+        if (L.mustache) { p.hl(5, 10, 13, L.mustache); p.p(4, 14, L.mustache); p.p(11, 14, L.mustache); }
+        if (L.clownface) { p.p(5, 12, '#000'); p.p(10, 12, '#000'); p.hl(6, 9, 14, '#d02030'); }
       }
       // волосы
       if (st !== 'bald') {
-        p.hl(5, 10, 4, hr); p.hl(4, 11, 5, hr);
-        for (let y = 6; y <= 8; y++) p.hl(3, 12, y, hr);
-        p.hl(5, 9, 5, hrL);
+        p.hl(5, 10, 3, hr); p.hl(4, 11, 4, hr);
+        for (let y = 5; y <= 7; y++) p.hl(3, 12, y, hr);
+        p.hl(5, 9, 4, hrL); p.p(4, 5, hrL); p.hl(10, 12, 7, hrD);
         if (back) {
-          for (let y = 9; y <= 16; y++) p.hl(3, 12, y, hr);
-          if (longHair) for (let y = 17; y <= 23; y++) p.hl(4, 11, y, y % 3 ? hr : hrD);
-          if (st === 'ponytail') { p.r(7, 16, 2, 7, hr); }
-          if (st === 'bun') p.circ(8, 4, 2, hrD);
+          for (let y = 8; y <= 15; y++) { p.hl(3, 12, y, hr); p.p(12, y, hrD); p.p(3, y, hrL); }
+          for (let x = 5; x <= 10; x += 2) p.vl(x, 9, 14, hrD);
+          if (longHair) for (let y = 16; y <= 22; y++) { p.hl(4, 11, y, y % 3 ? hr : hrD); p.p(11, y, hrD); }
+          if (st === 'ponytail') { const sw = step === 1 ? 1 : step === 3 ? -1 : 0; p.r(7 + sw, 15, 2, 7, hr); p.p(8 + sw, 21, hrD); }
+          if (st === 'bun') { p.circ(8, 3, 2, hrD); p.p(7, 2, hr); }
         } else {
           const bangs = st === 'messy' ? [3, 4, 6, 9, 11, 12] : st === 'veil' ? [3, 4, 5, 6, 7, 8, 12] : [3, 4, 6, 7, 9, 11, 12];
-          for (const x of bangs) p.p(x, 9, hr);
-          p.p(3, 10, hr); p.p(12, 10, hr);
-          if (st === 'veil') { p.hl(3, 8, 10, hr); p.hl(3, 7, 11, hr); p.hl(3, 6, 12, hr); }
-          const sideTo = longHair ? 22 : st === 'bob' ? 14 : 11;
-          for (let y = 9; y <= sideTo; y++) { p.p(y > 16 ? 3 : 2, y, hr); p.p(y > 16 ? 12 : 13, y, hr); if (longHair && y > 12) { p.p(y > 16 ? 4 : 3, y, hrD); p.p(y > 16 ? 11 : 12, y, hrD); } }
-          if (st === 'spiky') { p.p(4, 3, hr); p.p(7, 2, hr); p.p(10, 3, hr); p.p(12, 4, hr); }
-          if (st === 'bun') { p.circ(8, 3, 2, hr); p.p(7, 2, hrL); }
-          if (st === 'ponytail') { p.vl(13, 8, 16, hr); p.vl(14, 10, 15, hrD); }
+          for (const x of bangs) p.p(x, 8, hr);
+          p.p(3, 9, hr); p.p(12, 9, hrD); p.p(5, 7, hrD); p.p(8, 7, hrD); p.p(10, 7, hrD);
+          if (st === 'veil') { p.hl(3, 8, 9, hr); p.hl(3, 7, 10, hr); p.hl(3, 6, 11, hr); }
+          const sideTo = longHair ? 21 : st === 'bob' ? 13 : 10;
+          for (let y = 8; y <= sideTo; y++) { p.p(y > 15 ? 3 : 2, y, hr); p.p(y > 15 ? 12 : 13, y, hrD); if (longHair && y > 11) { p.p(y > 15 ? 4 : 3, y, hrD); p.p(y > 15 ? 11 : 12, y, hrD); } }
+          if (st === 'spiky') { p.p(4, 2, hr); p.p(7, 1, hr); p.p(10, 2, hr); p.p(12, 3, hr); p.p(7, 2, hrL); }
+          if (st === 'bun') { p.circ(8, 2, 2, hr); p.p(7, 1, hrL); }
+          if (st === 'ponytail') { const sw = step === 1 ? 1 : step === 3 ? -1 : 0; p.vl(13 + Math.max(0, sw), 7, 15, hr); p.vl(14 + Math.max(0, sw), 9, 14, hrD); }
         }
-      } else { p.hl(5, 10, 6, sk); p.p(6, 7, shade(sk, .3)); if (L.beard || L.mustache) { p.p(3, 10, '#ddd'); p.p(12, 10, '#ddd'); } }
-      // шляпы
+      } else { p.hl(5, 10, 5, sk); p.p(6, 6, skL); p.p(7, 5, skL); if (L.beard || L.mustache) { p.p(3, 9, '#ddd'); p.p(12, 9, '#ddd'); p.p(3, 10, '#ccc'); p.p(12, 10, '#ccc'); } }
       drawHatSmall(p, L, back);
-    } else { // left (right — зеркально)
-      const sw = step === 1 ? -1 : step === 2 ? 1 : 0;
-      if (longHair) { p.r(8, 9, 5, 14, hrD); }
-      for (let y = 18; y <= 25; y++) p.hl(5, 10, y, top);
-      if (fem) { p.p(4, 19, top); p.p(4, 20, top); if (L.neck === 'v' || L.neck === 'corset' || L.neck === 'bunny') { p.p(4, 18, sk); p.p(5, 18, sk); } }
-      if (L.apron) p.r(4, 20, 3, 8, L.apron);
-      const bs = L.bottomStyle || 'pants';
-      if (ghost) { for (let y = 24; y < 32; y++) { const a = 255 - (y - 24) * 30; p.hl(4, 11, y, bot, a); } }
-      else if (bs === 'skirt') { p.hl(4, 11, 24, bot); p.hl(4, 11, 25, bot); p.hl(3, 12, 26, bot); p.hl(3, 12, 27, bot); p.vl(6 + sw, 28, 30, L.legs || sk); p.vl(9 - sw, 28, 30, L.legs || sk); p.hl(5 + sw, 6 + sw, 31, shoe); p.hl(9 - sw, 10 - sw, 31, shoe); }
-      else if (bs === 'long') { for (let y = 24; y < 31; y++) p.hl(4, 11, y, bot); p.hl(4, 6, 31, shoe); }
-      else { for (let y = 24; y <= 30; y++) { p.hl(6 + (y > 26 ? sw : 0), 8 + (y > 26 ? sw : 0), y, bot); p.hl(8 - (y > 26 ? sw : 0), 10 - (y > 26 ? sw : 0), y, shade(bot, -.12)); } p.hl(5 + sw, 8 + sw, 31, shoe); p.hl(8 - sw, 10 - sw, 31, shoe); }
+    } else {
+      /* --- профиль (влево; вправо — зеркально) --- */
+      const fwd = step === 1 ? 1 : step === 3 ? -1 : 0;
+      if (ghost) { for (let y = 24; y < 32; y++) { const a = 230 - (y - 24) * 30; lo.hl(4, 11, y, bot, Math.max(30, a)); } }
+      else if (bs === 'pants') {
+        // дальняя нога
+        for (let y = 24; y <= 30; y++) lo.hl(7 + (y > 26 ? fwd : 0), 9 + (y > 26 ? fwd : 0), y, botD);
+        lo.hl(6 + fwd, 9 + fwd, 31, shade(shoe, -.2));
+        // ближняя
+        for (let y = 24; y <= 30; y++) { lo.hl(6 - (y > 26 ? fwd : 0), 8 - (y > 26 ? fwd : 0), y, bot); lo.p(6 - (y > 26 ? fwd : 0), y, botL); }
+        lo.hl(5 - fwd, 8 - fwd, 31, shoe); lo.p(5 - fwd, 31, shade(shoe, .35));
+      } else {
+        const legs = L.legs || sk;
+        lo.vl(8 + fwd, 25, 30, shade(legs, -.15)); lo.hl(7 + fwd, 8 + fwd, 31, shade(shoe, -.2));
+        lo.vl(7 - fwd, 25, 30, legs); lo.hl(6 - fwd, 7 - fwd, 31, shoe);
+      }
+      const p = up;
+      if (longHair) { for (let y = 8; y <= 22; y++) p.hl(8, 12, y, (y + (step >> 1)) % 3 ? hrD : shade(hrD, -.15)); }
+      for (let y = 17; y <= 24; y++) { p.hl(5, 10, y, top); p.p(5, y, topL); p.p(10, y, topD); }
+      if (fem) { p.p(4, 19, top); p.p(4, 20, topL); if (L.neck === 'v' || L.neck === 'corset' || L.neck === 'bunny') { p.p(4, 17, sk); p.p(5, 17, sk); p.p(5, 18, skD); } }
+      if (L.apron) p.r(4, 19, 3, 6, L.apron);
+      if (L.belt && bs === 'pants') p.hl(5, 10, 23, L.belt);
+      if (!ghost && bs === 'skirt') { for (let y = 23; y <= 27; y++) { p.hl(y < 25 ? 4 : 3, y < 25 ? 11 : 12, y, bot); p.p(y < 25 ? 4 : 3, y, botL); } p.vl(7, 25, 27, botD); p.hl(3, 12, 27, botD); }
+      if (!ghost && bs === 'long') { for (let y = 23; y <= 30; y++) { p.hl(y < 26 ? 4 : 3, 11, y, bot); p.p(y < 26 ? 4 : 3, y, botL); } p.vl(7, 26, 30, botD); }
       // рука
-      const sl = L.sleeve === 'none' ? sk : top;
-      p.vl(7 + sw, 18, 23, shade(sl, -.1)); p.vl(8 + sw, 18, 23, sl); p.p(7 + sw * 2, 24, sk); p.p(8 + sw * 2, 24, sk);
+      if (arm === 'up' || arm === 'hold') { for (let y = (arm === 'hold' ? 5 : 9); y <= 19; y++) p.p(6, y, sl); p.r(5, arm === 'hold' ? 3 : 8, 2, 2, sk); }
+      else if (arm === 'fwd') { p.hl(3, 8, 20, sl); p.hl(3, 8, 21, slD); p.r(1, 20, 2, 2, sk); }
+      else { p.vl(7 - armSw, 18, 22, slD); p.vl(8 - armSw, 18, 22, sl); p.p(7 - armSw * 2, 23, sk); p.p(8 - armSw * 2, 23, skD); }
       // голова
-      p.hl(7, 8, 17, skD);
-      const head = [[6, 5, 10], [7, 4, 11], [8, 4, 11], [9, 4, 11], [10, 4, 11], [11, 4, 11], [12, 3, 11], [13, 4, 11], [14, 4, 11], [15, 5, 10], [16, 6, 9]];
-      for (const [y, a, b] of head) p.hl(a, b, y, sk);
-      if (L.eyeStyle === 'void') { p.r(5, 11, 2, 2, '#000'); p.p(5, 12, '#f00'); }
-      else if (fem) { p.hl(4, 6, 11, '#1b1020'); p.p(5, 12, L.eyes || '#3a2a5a'); p.p(6, 12, shade(L.eyes || '#3a2a5a', .3)); p.p(6, 13, '#f0909a'); }
-      else p.vl(5, 11, 12, '#1b1020');
-      if (L.glasses) { p.hl(4, 7, 10, '#555'); p.p(4, 13, '#555'); p.p(7, 13, '#555'); }
-      p.p(4, 14, L.lips || skD);
-      if (L.beard) { p.hl(4, 9, 15, L.beard); p.hl(5, 9, 16, L.beard); p.hl(4, 6, 14, L.beard); }
-      if (L.mustache) { p.hl(3, 6, 14, L.mustache); }
-      if (L.clownface) { p.p(5, 13, '#000'); p.p(3, 12, '#d02030'); }
+      p.hl(7, 8, 16, skD);
+      const head = [[5, 5, 10], [6, 4, 11], [7, 4, 11], [8, 4, 11], [9, 4, 11], [10, 4, 11], [11, 3, 11], [12, 4, 11], [13, 4, 11], [14, 5, 10], [15, 6, 9]];
+      for (const [y, a, b] of head) { p.hl(a, b, y, sk); p.p(b, y, skD); }
+      if (L.eyeStyle === 'void') { p.r(5, 10, 2, 2, '#000'); p.p(5, 11, '#f00'); }
+      else if (bl) p.hl(4, 6, 11, '#1b1020');
+      else if (fem) { p.hl(4, 6, 10, '#1b1020'); p.p(5, 11, L.eyes || '#3a2a5a'); p.p(6, 11, '#ffffff'); p.p(6, 12, '#f08a98'); }
+      else { p.vl(5, 10, 11, '#1b1020'); p.p(5, 10, '#fff'); p.p(5, 10, '#1b1020'); }
+      if (L.glasses) { p.hl(4, 7, 9, '#555'); p.p(4, 12, '#555'); p.p(7, 12, '#555'); }
+      p.p(4, 13, L.lips || skDD); p.p(9, 11, skD);
+      if (L.beard) { p.hl(4, 9, 14, L.beard); p.hl(5, 9, 15, L.beard); p.hl(4, 6, 13, L.beard); }
+      if (L.mustache) p.hl(3, 6, 13, L.mustache);
+      if (L.clownface) { p.p(5, 12, '#000'); p.p(3, 11, '#d02030'); }
       if (st !== 'bald') {
-        p.hl(5, 11, 4, hr); p.hl(4, 12, 5, hr); for (let y = 6; y <= 8; y++) p.hl(4, 12, y, hr); p.hl(6, 10, 5, hrL);
-        p.p(4, 9, hr); p.p(5, 9, hr); p.p(4, 10, hr);
-        const backTo = longHair ? 23 : st === 'bob' ? 14 : 12;
-        for (let y = 9; y <= backTo; y++) { p.hl(y > 16 ? 9 : 8, 12, y, y % 4 ? hr : hrD); }
-        if (st === 'veil') { p.hl(4, 7, 10, hr); p.hl(4, 6, 11, hr); }
-        if (st === 'ponytail') { p.vl(13, 8, 18, hr); p.vl(14, 10, 16, hrD); }
-        if (st === 'twintail') { p.r(12, 8, 3, 13, hr); }
-        if (st === 'bun') p.circ(10, 3, 2, hr);
-        if (st === 'spiky') { p.p(6, 3, hr); p.p(9, 2, hr); p.p(12, 3, hr); }
-      } else { p.p(6, 6, shade(sk, .3)); p.hl(9, 11, 10, '#ddd'); }
+        p.hl(5, 11, 3, hr); p.hl(4, 12, 4, hr); for (let y = 5; y <= 7; y++) p.hl(4, 12, y, hr); p.hl(6, 10, 4, hrL); p.p(5, 5, hrL);
+        p.p(4, 8, hr); p.p(5, 8, hr); p.p(4, 9, hr);
+        const backTo = longHair ? 22 : st === 'bob' ? 13 : 11;
+        for (let y = 8; y <= backTo; y++) { p.hl(y > 15 ? 9 : 8, 12, y, y % 4 ? hr : hrD); p.p(12, y, hrD); }
+        if (st === 'veil') { p.hl(4, 7, 9, hr); p.hl(4, 6, 10, hr); }
+        if (st === 'ponytail') { const sw = step === 1 ? 1 : step === 3 ? -1 : 0; p.vl(13, 7, 17 + sw, hr); p.vl(14, 9, 15 + sw, hrD); }
+        if (st === 'twintail') { p.r(12, 7, 3, 13, hr); p.vl(14, 8, 19, hrD); }
+        if (st === 'bun') { p.circ(10, 2, 2, hr); p.p(9, 1, hrL); }
+        if (st === 'spiky') { p.p(6, 2, hr); p.p(9, 1, hr); p.p(12, 2, hr); }
+      } else { p.p(6, 5, skL); p.hl(9, 11, 9, '#ddd'); }
       drawHatSmall(p, L, false, true);
     }
-    if (ghost) p.map((x, y, c) => [Math.min(255, c[0] * .8 + 50), Math.min(255, c[1] * .8 + 55), Math.min(255, c[2] * .8 + 65), Math.min(c[3], 210)]);
-    p.outline(L.outline || OUTLINE);
-    const c = p.done();
-    return c;
+    // сборка: ноги + верх со сдвигом
+    const out = new PX(16, 32);
+    out.blit(lo, 0, 0); out.blit(up, 0, dy + 1);
+    if (ghost) out.map((x, y, c) => [Math.min(255, c[0] * .8 + 50), Math.min(255, c[1] * .8 + 55), Math.min(255, c[2] * .8 + 65), Math.min(c[3], 210)]);
+    out.selOutline(.62);
+    return out.done();
   });
+}
+function charSprite(L, dir, pose = {}) {
+  if (dir !== 'right') return drawChar(L, dir, pose);
+  const k = `flipch:${L.id || JSON.stringify(L)}:${pose.step | 0}:${pose.br | 0}:${pose.bl | 0}:${pose.arm || ''}`;
+  return spr(k, () => flipH(drawChar(L, 'left', pose)));
 }
 function drawHatSmall(p, L, back, side) {
   switch (L.hat) {
@@ -161,58 +199,123 @@ function drawHatSmall(p, L, back, side) {
 }
 
 /* ---------- портреты 64x64 ---------- */
-function portrait(id, emo = 'neutral') {
-  return spr(`por:${id}:${emo}`, () => {
+function portrait(id, emo = 'neutral', talk = false, blink = false) {
+  return spr(`por:${id}:${emo}:${talk ? 1 : 0}:${blink ? 1 : 0}`, () => {
     const D = PORTRAITS[id] || PORTRAITS.player;
     const L = (typeof D === 'function') ? D() : D;
     if (L.special) return L.special(emo);
-    return drawPortrait(L, emo);
+    return drawPortrait(L, emo, talk, blink);
   });
 }
-function drawPortrait(L, emo) {
+function drawPortrait(L, emo, talk = false, blink = false) {
   const p = new PX(64, 64);
   const sk = L.skin || '#f2c6a0', skD = shade(sk, -.15), skDD = shade(sk, -.3), skL = shade(sk, .15);
   const hr = L.hair || '#3a2a1a', hrD = shade(hr, -.3), hrL = shade(hr, .3);
   const fem = !!L.fem, st = L.hairStyle || 'short';
   const creepy = emo === 'creepy';
-  // волосы сзади
-  if (['long', 'veil', 'wavy'].includes(st)) { p.poly([[14, 22], [50, 22], [56, 64], [8, 64]], hrD); p.ell(32, 26, 20, 18, hrD); }
-  if (st === 'twintail') { p.ell(9, 40, 6, 18, hr); p.ell(55, 40, 6, 18, hr); }
+  // 1) базовая форма в 64px
+  if (['long', 'veil', 'wavy'].includes(st)) { p.poly([[14, 22], [50, 22], [56, 64], [8, 64]], hrD); p.ell(32, 26, 20, 18, hrD); for (let x = 12; x < 54; x += 5) p.line(x, 34, x - 2, 63, shade(hrD, -.2)); }
+  if (st === 'twintail') { p.ell(9, 40, 6, 18, hr); p.ell(55, 40, 6, 18, hr); p.line(8, 26, 6, 56, hrL); p.line(56, 26, 58, 56, hrD); }
   if (st === 'bob') { p.ell(32, 30, 19, 17, hrD); }
-  if (st === 'ponytail') { p.ell(50, 38, 6, 16, hrD); }
-  // плечи / торс
+  if (st === 'ponytail') { p.ell(50, 38, 6, 16, hrD); p.line(49, 26, 51, 52, hr); }
   const top = L.top || '#4a6a9a', topD = shade(top, -.25), topL = shade(top, .15);
   p.poly([[4, 64], [60, 64], [56, 52], [44, 47], [20, 47], [8, 52]], top);
   p.poly([[44, 47], [56, 52], [60, 64], [48, 64]], topD);
-  // шея
-  p.r(27, 38, 10, 12, skD); p.r(27, 38, 4, 12, sk);
-  // вырез / наряд
+  p.r(27, 38, 10, 12, skD); p.r(27, 38, 4, 12, sk); p.hl(27, 36, 44, skDD);
   drawOutfit(p, L, sk, skD, skDD, top, topD, topL);
-  // голова
   p.ell(32, 27, 14, 15, sk);
   p.poly([[19, 30], [45, 30], [40, 40], [32, 44], [24, 40]], sk);
   p.line(44, 31, 39, 40, skD); p.line(39, 40, 33, 43, skD); p.line(45, 28, 44, 33, skD);
   p.ell(18, 31, 2, 3, skD); p.ell(46, 31, 2, 3, skD);
-  // лицо
-  drawFace(p, L, emo, sk, skD, skDD);
-  // волосы спереди
   drawHairFront(p, L, st, hr, hrD, hrL);
-  // брови поверх чёлки — для выразительности
-  const bc2 = shade(L.hair || '#3a2a1a', -.35);
-  if (emo === 'angry') { p.line(20, 22, 28, 25, bc2); p.line(44, 22, 36, 25, bc2); }
-  else if (emo === 'sad') { p.line(20, 25, 28, 22, bc2); p.line(44, 25, 36, 22, bc2); }
-  else if (emo === 'surprised') { p.hl(21, 28, 21, bc2); p.hl(36, 43, 21, bc2); }
-  // аксессуары
   drawHatBig(p, L);
-  if (L.glasses) { p.ring(25, 30, 5, '#4a4a4a'); p.ring(39, 30, 5, '#4a4a4a'); p.hl(30, 34, 29, '#4a4a4a'); p.line(25, 27, 22, 28, '#ffffff'); }
-  if (L.beard) { p.poly([[20, 33], [44, 33], [42, 46], [32, 52], [22, 46]], L.beard); p.ell(32, 39, 5, 2, skDD); p.hl(29, 35, 39, '#5a2a2a'); }
+  if (L.beard) { p.poly([[20, 33], [44, 33], [42, 46], [32, 52], [22, 46]], L.beard); for (let x = 22; x < 43; x += 3) p.line(x, 36, x + 1, 46, shade(L.beard, -.15)); }
   if (L.mustache) { p.poly([[24, 37], [32, 35], [40, 37], [42, 40], [32, 38], [22, 40]], L.mustache); }
-  if (L.clownface) { p.ell(32, 30, 12, 11, '#f8f4f0', 140); p.poly([[25, 33], [27, 33], [26, 38]], '#111'); p.circ(32, 35, 2, '#d02030'); }
+  if (L.clownface) { p.ell(32, 30, 12, 11, '#f8f4f0', 140); }
   if (L.scar) p.line(36, 22, 42, 34, skDD);
-  if (creepy) { p.vl(25, 33, 42, '#8a0010'); p.vl(39, 33, 38, '#8a0010'); }
-  p.outline(OUTLINE);
-  if (L.ghost || creepy) p.map((x, y, c) => creepy && !L.ghost ? [c[0] * .9 + 20, c[1] * .75, c[2] * .75, c[3]] : [c[0] * .75 + 60, c[1] * .8 + 60, c[2] * .8 + 70, c[3]]);
-  return p.done();
+  // 2) сглаженный апскейл до 128
+  const P = p.scale2x();
+  // 3) лицо в высоком разрешении
+  const isSkin = (x, y) => { const c = P.get(x, y); if (!c[3]) return false; const s2 = rgb(sk); return Math.abs(c[0] - s2[0]) + Math.abs(c[1] - s2[1]) + Math.abs(c[2] - s2[2]) < 70; };
+  drawFaceHi(P, L, emo, talk, blink, sk, skD, skDD, isSkin);
+  if (L.glasses) { for (const cx of [50, 78]) { P.ring(cx, 60, 10, '#3a3a3a'); P.ring(cx, 60, 9, '#5a5a5a'); P.line(cx - 6, 54, cx - 3, 52, '#ffffff'); } P.hl(60, 68, 58, '#3a3a3a'); }
+  if (L.clownface) { P.poly([[49, 66], [53, 66], [51, 76]], '#111'); P.circ(64, 70, 4, '#d02030'); P.p(63, 68, '#ff8090'); }
+  if (creepy) { P.vl(50, 66, 84, '#8a0010'); P.vl(51, 66, 80, '#8a0010'); P.vl(78, 66, 76, '#8a0010'); }
+  // блики на волосах
+  for (let k = 0; k < 3; k++) { const x0 = 40 + k * 16, y0 = 22 - Math.abs(1 - k) * 4; if (P.a(x0, y0)) { const c = P.get(x0, y0); if (!isSkin(x0, y0)) P.line(x0, y0, x0 + 6, y0 - 2, hex([Math.min(255, c[0] + 60), Math.min(255, c[1] + 60), Math.min(255, c[2] + 60)])); } }
+  P.rim(.08, .12);
+  P.selOutline(.66);
+  if (L.ghost || creepy) P.map((x, y, c) => creepy && !L.ghost ? [c[0] * .9 + 20, c[1] * .75, c[2] * .75, c[3]] : [c[0] * .75 + 60, c[1] * .8 + 60, c[2] * .8 + 70, c[3]]);
+  return P.done();
+}
+// лицо 128px: глаза, брови, нос, рот (говорит/моргает)
+function drawFaceHi(P, L, emo, talk, blink, sk, skD, skDD, isSkin) {
+  const fem = !!L.fem, ec = L.eyes || '#3a6a9a', ecD = shade(ec, -.45), ecM = shade(ec, -.15), ecL = shade(ec, .35);
+  const lash = '#1a0e14', lip = L.lips || shade(sk, -.38);
+  const closed = blink || emo === 'happy';
+  const eye = (cx, side, wink) => {
+    if (!isSkin(cx, 60) && !isSkin(cx - 3, 62)) return; // закрыт волосами
+    if (closed || wink) {
+      if (emo === 'happy' && !blink) { for (let i = -6; i <= 6; i++) { const y = 61 - Math.round(Math.sqrt(Math.max(0, 36 - i * i)) * .55); P.p(cx + i, y, lash); P.p(cx + i, y + 1, lash); } }
+      else { for (let i = -6; i <= 6; i++) { const y = 60 + Math.round((i * i) / 18); P.p(cx + i, y, lash); P.p(cx + i, y + 1, shade(lash, .2)); } if (fem) { P.line(cx + side * 6, 61, cx + side * 8, 63, lash); P.p(cx - 2, 63, lash); P.p(cx + 1, 63, lash); } }
+      return;
+    }
+    if (emo === 'creepy') {
+      P.ell(cx, 59, 7, 5, '#060404'); P.circ(cx + 1, 59, 1, '#ff1020'); P.p(cx + 1, 58, '#ff8080');
+      for (let i = -7; i <= 7; i++) P.p(cx + i, 53 + Math.round((i * i) / 20), lash);
+      return;
+    }
+    const wide = emo === 'surprised';
+    if (fem) {
+      P.ell(cx, 59, 7, wide ? 7 : 6, '#ffffff');
+      P.ell(cx, 59, 7, 1, '#e8e0ec'); // тень от века
+      const ry = wide ? 5 : 6;
+      P.ell(cx, 60, 4.5, ry, ecM);
+      for (let y = 54; y <= 66; y++) for (let x = cx - 5; x <= cx + 5; x++) { const c = P.get(x, y); if (c[3] && rgb(ecM).every((v, i) => Math.abs(v - c[i]) < 3)) { P.p(x, y, y < 57 ? ecD : y > 62 ? ecL : ec); } }
+      P.ell(cx, 60, wide ? 1.5 : 2, wide ? 2 : 3, '#140a18');
+      P.r(cx - 4, 55, 3, 3, '#ffffff'); P.p(cx - 3, 58, '#ffffff'); P.p(cx + 2, 63, '#ffffff'); P.p(cx + 3, 62, '#e8f4ff');
+      // ресницы: густая верхняя линия с «крылом»
+      for (let i = -7; i <= 7; i++) { const y = 53 + Math.round((i * i) / 22); P.p(cx + i, y, lash); P.p(cx + i, y + 1, lash); }
+      P.line(cx + side * 7, 53, cx + side * 10, 50, lash); P.line(cx + side * 7, 54, cx + side * 9, 52, lash);
+      P.line(cx - side * 7, 55, cx - side * 8, 54, lash);
+      for (let i = -4; i <= 4; i++) P.p(cx + i, 66, i === 4 * side ? lash : skDD);
+      P.line(cx - 5, 50, cx + 4, 50, skD); // складка века
+    } else {
+      P.ell(cx, 60, 5, wide ? 5 : 3, '#ffffff');
+      P.ell(cx, 60, 3, wide ? 4 : 3, ec); P.ell(cx, 60, 1.5, 2, '#140a18'); P.r(cx - 2, 58, 2, 2, '#ffffff');
+      for (let i = -6; i <= 5; i++) { P.p(cx + i, 56 + Math.round((i * i) / 30), lash); P.p(cx + i, 57 + Math.round((i * i) / 30), shade(lash, .2)); }
+    }
+  };
+  eye(50, -1, false);
+  eye(78, 1, emo === 'wink');
+  // брови
+  const bc = shade(L.hair || '#3a2a1a', -.35);
+  const brow = (cx, side) => {
+    let a = 0; if (emo === 'angry') a = -1; else if (emo === 'sad') a = 1; else if (emo === 'surprised') a = .2;
+    const y0 = emo === 'surprised' ? 43 : 46;
+    for (let i = -7; i <= 7; i++) { const t = (i * side + 7) / 14; const y = y0 + Math.round(a * (t - .5) * 6 * -1) + (i * i > 30 ? 1 : 0); const w = fem ? (t > .2 && t < .8 ? 2 : 1) : 2; for (let k = 0; k < w; k++) P.p(cx + i, y + k, bc); }
+  };
+  if (emo !== 'creepy') { brow(50, -1); brow(78, 1); }
+  // румянец
+  if (emo === 'blush' || emo === 'wink' || (fem && emo === 'happy')) { for (const cx of [44, 84]) { P.ell(cx, 72, 6, 2.5, '#f2909e', 140); for (let k = -2; k <= 2; k++) P.line(cx + k * 3 - 1, 73, cx + k * 3 + 1, 70, '#e86a7e'); } }
+  else if (fem) for (const cx of [44, 84]) P.ell(cx, 72, 5, 2, '#f4a8b0', 70);
+  // нос
+  P.line(66, 68, 66, 72, skD); P.p(65, 73, skDD); P.p(64, 73, skD); P.p(67, 67, shade(sk, .25));
+  // рот
+  if (!isSkin(64, 80) && !isSkin(64, 78)) return; // скрыт бородой
+  const mouthOpen = talk && emo !== 'creepy';
+  switch (emo) {
+    case 'creepy': P.poly([[46, 76], [82, 76], [76, 88], [52, 88]], '#2a0006'); for (let x = 48; x < 81; x += 4) { P.r(x, 76, 2, 4, '#f0eadc'); P.r(x + 2, 84, 2, 4, '#f0eadc'); } break;
+    case 'happy': P.poly([[55, 77], [73, 77], [70, 84], [64, 86], [58, 84]], '#6a1020'); P.hl(56, 72, 77, '#ffffff'); P.hl(57, 71, 78, '#ffffff'); P.ell(64, 84, 4, 1.5, '#e05a6a'); break;
+    case 'sad': if (mouthOpen) P.ell(64, 81, 4, 3, '#5a1020'); else for (let i = -5; i <= 5; i++) P.p(64 + i, 80 - Math.round((25 - i * i) / 10), lip); break;
+    case 'angry': P.r(56, 78, 17, 5, '#4a0a14'); P.hl(57, 71, 79, '#ffffff'); P.hl(57, 71, 81, '#ffffff'); for (let x = 59; x < 72; x += 3) P.vl(x, 79, 81, '#c8c0b8'); break;
+    case 'surprised': P.ell(64, 81, 4, 5, '#5a1020'); P.ell(64, 83, 2.5, 2, '#d05a6a'); break;
+    case 'wink': for (let i = -6; i <= 6; i++) P.p(64 + i, 79 + Math.round(i / 3) - (i > 3 ? 1 : 0), lip); P.p(70, 77, lip); break;
+    default:
+      if (mouthOpen) { P.ell(64, 80, 5, 3.5, '#6a1424'); P.hl(60, 68, 77, '#ffffff'); P.ell(64, 82, 3, 1.5, '#d05a6a'); }
+      else { for (let i = -5; i <= 5; i++) P.p(64 + i, 79 + (i * i > 16 ? -1 : 0), lip); for (let i = -3; i <= 3; i++) P.p(64 + i, 80, shade(lip, .25)); }
+  }
+  if (mouthOpen && (emo === 'happy' || emo === 'blush' || emo === 'wink')) { P.ell(64, 81, 4, 3, '#6a1424'); P.ell(64, 83, 2.5, 1.2, '#d05a6a'); }
 }
 function drawOutfit(p, L, sk, skD, skDD, top, topD, topL) {
   switch (L.outfit) {

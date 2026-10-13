@@ -46,6 +46,7 @@ const Game = {
     if (this.state !== 'play') return;
     const m = World.cur; if (!m) return;
     Render.t += dt;
+    if (this.hitStop > 0) { this.hitStop -= dt; Parts.update(dt * .2); return; }
     Render.shake = Math.max(0, Render.shake - dt * 20); Render.flash = Math.max(0, Render.flash - dt * 2);
     // время
     if (!this.locked() && !m.noTime) {
@@ -220,7 +221,7 @@ const Interact = {
       case 'bed': (async () => { const c = await UI.choose('Лечь спать? (Игра сохранится)', ['Спать', 'Ещё не время']); if (c === 0) Game.sleep(); })(); return true;
       case 'tv': Events.tv(); return true;
       case 'chest':
-        if (o.dungeon) { const id = o.dungeon; if (!Inv.add(id, 1)) { UI.note('Нет места!'); return true; } S.flags['chest' + o.floor] = true; m.remove(o); AU.sfx('quest'); UI.note('Найдено: ' + ITEMS[id].n, 'good'); if (id === 'shorts') Quests.start('q_shorts'); return true; }
+        if (o.dungeon) { const id = o.dungeon; if (!Inv.add(id, 1)) { UI.note('Нет места!'); return true; } P.show = { id, t: 0 }; Parts.sparks(o.x * 16 + 8, o.y * 16, '#ffe060', 12); S.flags['chest' + o.floor] = true; m.remove(o); AU.sfx('quest'); UI.note('Найдено: ' + ITEMS[id].n, 'good'); if (id === 'shorts') Quests.start('q_shorts'); return true; }
         if (o.grandpa && !S.flags.grandpaChest) { Events.grandpaChest(o); return true; }
         UI.openChest(o); return true;
       case 'mailbox': Mail.open(); return true;
@@ -336,7 +337,7 @@ const Social = {
     if (pts > 0) pts = Math.round(pts * (1 + (st.q || 0) * .1));
     if (bday) pts *= 8;
     Inv.takeAt(S.inv.indexOf(st), 1); r.gifted = true; r.week++;
-    this.addPts(id, pts); n.talking = 2;
+    this.addPts(id, pts); n.talking = 2; if (pts > 0) { n.heartT = 1.2; Parts.hearts(n.x, n.y - 30, t === 'love' ? 6 : 3); }
     if (!r.talked) { r.talked = true; this.addPts(id, 20); }
     if (t === 'love') Sanity.add(4); if (t === 'like') Sanity.add(2);
     const emo = { love: 'happy', like: 'happy', neutral: 'neutral', dislike: 'sad', hate: 'angry' }[t];

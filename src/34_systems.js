@@ -187,7 +187,7 @@ const Farm = {
     if (!Inv.add(C.item, 1, q)) { UI.note('Рюкзак полон!', 'bad'); return true; }
     for (let k = 1; k < n; k++) if (!Inv.add(C.item, 1, 0, undefined, true)) Drops.spawn(m, x * 16 + 8, y * 16 + 8, C.item, 1);
     if (C.seedBack && U.chance(.5) && !Inv.add(C.item + '_seed', 1, 0, undefined, true)) Drops.spawn(m, x * 16 + 8, y * 16 + 8, C.item + '_seed', 1);
-    AU.sfx('harvest'); Parts.burst(x * 16 + 8, y * 16 + 4, C.col, 6);
+    AU.sfx('harvest'); Parts.burst(x * 16 + 8, y * 16 + 4, '#5a9a3a', 5); Parts.itemPop(x * 16 + 8, y * 16 + 2, C.item);
     Skills.xp('farming', Math.round(16 * Math.log(.018 * ITEMS[C.item].p + 1)));
     S.stats.harvest = (S.stats.harvest || 0) + n;
     if (C.scream) { AU.sfx('scream'); Sanity.add(-8); Render.shake = 4; UI.note('А-А-А-А-А! (мандрагора)', 'bad'); }

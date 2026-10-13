@@ -143,7 +143,7 @@ const Events = {
   },
   async givePage(i) {
     if (S.pages.includes(i)) return;
-    S.pages.push(i); AU.sfx('quest');
+    S.pages.push(i); AU.sfx('quest'); P.show = { id: 'page', t: 0 };
     if (!S.quests.active.includes('q_pages') && !S.quests.done.includes('q_pages')) Quests.start('q_pages');
     await UI.letter(PAGES[i], true);
     UI.note(`Страница рукописи ${S.pages.length}/7`, 'good');

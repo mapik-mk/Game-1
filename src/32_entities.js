@@ -75,21 +75,28 @@ const NPCRT = {
     return best;
   },
   draw(g, n) {
-    if (n.deco) { const c = monsterSprite('zhmur', Math.floor(Render.t * 4 + n.zh) % 2, String(n.zh % 5)); g.globalAlpha = .85; g.drawImage(c, Math.round(n.x - 6), Math.round(n.y - 14)); g.globalAlpha = 1; return; }
-    const L = n.def.look; let dir = n.dir;
-    const fr = n.path ? (Math.floor(n.animT) % 4 === 1 ? 1 : Math.floor(n.animT) % 4 === 3 ? 2 : 0) : 0;
-    let c = drawChar(L, dir === 'right' ? 'left' : dir, fr);
-    if (dir === 'right') c = spr(`flip:ch:${L.id}:${fr}`, () => flipH(drawChar(L, 'left', fr)));
+    if (n.deco) { const c = monsterSprite('zhmur', Math.floor(Render.t * 4 + n.zh) % 2, String(n.zh % 5)); g.globalAlpha = .9; g.drawImage(c, n.x - 6, n.y - 16 + Math.sin(Render.t * 3 + n.zh) * 2); g.globalAlpha = 1; return; }
+    const L = n.def.look;
+    const ph = (n.id.length * 1.7) % 3, t = Render.t;
+    const pose = { step: n.path ? Math.floor(n.animT) % 4 : 0, br: !n.path && Math.sin(t * 2.1 + ph) > .55 ? 1 : 0, bl: ((t + ph * 1.3) % 4.3) < .13 ? 1 : 0 };
+    const c = charSprite(L, n.dir, pose);
     let a = 1; if (n.fadeIn) a = 1 - n.fadeIn; if (n.leaving) a = Math.max(0, n.leaving);
-    const bob = n.def.ghost ? Math.sin(Render.t * 2) * 2 - 2 : 0;
-    g.globalAlpha = a * (n.def.ghost ? .8 : 1);
-    if (!n.def.ghost) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(n.x, n.y - 1, 6, 2.5, 0, 0, 7); g.fill(); }
-    g.drawImage(c, Math.round(n.x - 8), Math.round(n.y - 31 + bob));
-    if (S.sanity < 25 && !n.def.ghost && Math.floor(Render.t * 2 + n.x) % 9 === 0) g.drawImage(tint(c, '#000', .85), Math.round(n.x - 8), Math.round(n.y - 31));
+    const bob = n.def.ghost ? Math.sin(t * 2) * 2 - 3 : 0;
+    g.globalAlpha = a * (n.def.ghost ? .82 : 1);
+    if (!n.def.ghost) { g.fillStyle = 'rgba(0,0,0,.26)'; g.beginPath(); g.ellipse(n.x, n.y - 1, 6.5, 2.6, 0, 0, 7); g.fill(); }
+    else { g.fillStyle = 'rgba(120,180,255,.18)'; g.beginPath(); g.ellipse(n.x, n.y, 7 + Math.sin(t * 2), 2.5, 0, 0, 7); g.fill(); }
+    g.drawImage(c, n.x - 8, n.y - 32 + bob);
+    if (S.sanity < 25 && !n.def.ghost && Math.floor(t * 2 + n.x) % 9 === 0) g.drawImage(tint(c, '#000', .85), n.x - 8, n.y - 32);
     g.globalAlpha = 1;
     const r = S.rel[n.id];
-    if (r && !r.talked && n.def.lines && !Game.locked()) { const b = Math.sin(Render.t * 4) * 1.5; g.fillStyle = '#fff'; g.fillRect(n.x - 3, n.y - 42 + b, 6, 6); g.fillStyle = '#c02030'; g.fillRect(n.x - 1, n.y - 41 + b, 2, 3); g.fillRect(n.x - 1, n.y - 37 + b, 2, 1); }
-    if (n.emote) { g.font = '10px sans-serif'; g.fillStyle = '#fff'; g.fillText(n.emote, n.x - 4, n.y - 40); }
+    if (r && !r.talked && n.def.lines && !Game.locked()) {
+      const b = Math.sin(t * 4) * 1.5, bx = n.x, by = n.y - 44 + b;
+      g.fillStyle = '#fff8e8'; g.beginPath(); g.ellipse(bx, by, 6, 4.5, 0, 0, 7); g.fill();
+      g.beginPath(); g.moveTo(bx - 2, by + 3); g.lineTo(bx - 3, by + 7); g.lineTo(bx + 1, by + 4); g.fill();
+      g.strokeStyle = '#5a3a1a'; g.lineWidth = .7; g.beginPath(); g.ellipse(bx, by, 6, 4.5, 0, 0, 7); g.stroke();
+      g.fillStyle = '#5a3a1a'; for (let k = -1; k <= 1; k++) { g.beginPath(); g.arc(bx + k * 2.4, by + (Math.floor(t * 3) % 3 === k + 1 ? -.6 : 0), .8, 0, 7); g.fill(); }
+    }
+    if (n.heartT > 0) { n.heartT -= 1 / 60; const k = 1 - n.heartT; g.globalAlpha = Math.min(1, n.heartT * 2); g.drawImage(itemIconCanvas('heartfx'), n.x - 6 + Math.sin(k * 8) * 2, n.y - 46 - k * 12, 12, 12); g.globalAlpha = 1; }
   },
 };
 function spouseSched(id, d, base) {
@@ -147,7 +154,7 @@ const Mon = {
   hit(m, mo, dmg, crit, kx, ky) {
     if (mo.def.halluc) { this.vanish(m, mo); return; }
     if (mo.invuln) { Render.addText(mo.x, mo.y - mo.h, 'НЕУЯЗВИМ', '#aaa', .7); return; }
-    mo.hp -= dmg; mo.hitT = .15; AU.sfx('hit');
+    mo.hp -= dmg; mo.hitT = .15; AU.sfx('hit'); Game.hitStop = crit ? .09 : .045;
     const kb = mo.def.boss ? 30 : 140; mo.kbx = kx * kb; mo.kby = ky * kb;
     Render.addText(mo.x, mo.y - mo.h, String(Math.round(dmg)), crit ? '#ffe040' : '#fff', crit ? 1.3 : 1);
     Parts.burst(mo.x, mo.y - mo.h / 2, mo.def.spr === 'slime' ? '#5ac84a' : mo.def.spr === 'ink' || mo.def.spr === 'author' ? '#000' : '#b01020', 5);
@@ -156,7 +163,8 @@ const Mon = {
   vanish(m, mo) { const i = m.mons.indexOf(mo); if (i >= 0) m.mons.splice(i, 1); Parts.burst(mo.x, mo.y - 16, '#000', 14); AU.sfx('whisper'); },
   kill(m, mo) {
     const i = m.mons.indexOf(mo); if (i < 0) return; m.mons.splice(i, 1);
-    AU.sfx('kill'); Parts.burst(mo.x, mo.y - mo.h / 2, '#fff', 10);
+    AU.sfx('kill'); Parts.poof(mo.x, mo.y - mo.h / 2, mo.def.spr === 'slime' ? 'rgba(140,230,120,.7)' : 'rgba(230,230,240,.7)', 10); Parts.burst(mo.x, mo.y - mo.h / 2, mo.def.spr === 'slime' ? '#5ac84a' : '#8a0a1a', 6);
+    if (mo.def.souls) Parts.souls(mo.x, mo.y - mo.h / 2, Math.min(8, 2 + Math.floor(mo.def.souls / 10)));
     const luck = S.flags.catSmile ? 1.3 : 1;
     for (const [id, ch] of mo.def.drops) if (Math.random() < ch * luck) Drops.spawn(m, mo.x, mo.y - 4, id, 1);
     if (mo.def.souls) { const s = Math.round(mo.def.souls * (1 + (m.depth || 0) / 40)); S.souls += s; Render.addText(mo.x, mo.y - mo.h - 6, '+' + s + ' душ', '#9adfff', .8); AU.sfx('souls'); }
@@ -321,10 +329,50 @@ const Drops = {
 };
 /* ---------- частицы ---------- */
 const Parts = {
-  add(x, y, vx, vy, col, life = .5, size = 1) { const m = World.cur; if (m && m.parts.length < 300) m.parts.push({ x, y, vx, vy, col, life, max: life, size }); },
-  burst(x, y, col, n = 6) { for (let k = 0; k < n; k++) { const a = Math.random() * 7, s = 20 + Math.random() * 50; this.add(x, y, Math.cos(a) * s, Math.sin(a) * s - 20, col, .4 + Math.random() * .3, Math.random() < .3 ? 2 : 1); } },
-  update(dt) { const m = World.cur; for (let i = m.parts.length - 1; i >= 0; i--) { const p = m.parts[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 120 * dt; if (p.life <= 0) m.parts.splice(i, 1); } },
-  draw(g) { const m = World.cur; for (const p of m.parts) { g.globalAlpha = Math.min(1, p.life / p.max * 1.5); g.fillStyle = p.col; g.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size); } g.globalAlpha = 1; },
+  add(x, y, vx, vy, col, life = .5, size = 1, o = {}) {
+    const m = World.cur; if (!m || m.parts.length > 420) return;
+    m.parts.push({ x, y, vx, vy, col, life, max: life, size, g: o.g === undefined ? 120 : o.g, k: o.k || 'dot', drag: o.drag || 0, grow: o.grow || 0, r: Math.random() * 6, vr: o.vr || 0, home: o.home });
+  },
+  burst(x, y, col, n = 6) { for (let k = 0; k < n; k++) { const a = Math.random() * 7, s = 25 + Math.random() * 55; this.add(x, y, Math.cos(a) * s, Math.sin(a) * s - 30, col, .45 + Math.random() * .35, Math.random() < .35 ? 1.6 : 1, { g: 220, vr: (Math.random() - .5) * 20, k: 'chip' }); } },
+  dust(x, y, n = 2) { for (let k = 0; k < n; k++) this.add(x + (Math.random() - .5) * 4, y - 1, (Math.random() - .5) * 14, -4 - Math.random() * 6, 'rgba(200,180,150,.55)', .45, 1.2, { g: -8, k: 'puff', grow: 2.5, drag: 3 }); },
+  smoke(x, y) { this.add(x + (Math.random() - .5) * 3, y, (Math.random() - .3) * 6, -10 - Math.random() * 6, 'rgba(190,190,200,.45)', 2.2, 1.5, { g: -2, k: 'puff', grow: 5, drag: .6 }); },
+  splash(x, y) {
+    this.add(x, y, 0, 0, 'rgba(200,235,255,.9)', .5, 1, { g: 0, k: 'ring', grow: 7 });
+    for (let k = 0; k < 6; k++) { const a = Math.PI + Math.random() * Math.PI; this.add(x, y, Math.cos(a) * 30, Math.sin(a) * 40, '#bfe4ff', .4, 1, { g: 200 }); }
+  },
+  sparks(x, y, col = '#ffd860', n = 6) { for (let k = 0; k < n; k++) { const a = Math.random() * 7, s = 40 + Math.random() * 70; this.add(x, y, Math.cos(a) * s, Math.sin(a) * s - 20, col, .3 + Math.random() * .2, 1, { g: 260, k: 'spark' }); } },
+  hearts(x, y, n = 3) { for (let k = 0; k < n; k++) this.add(x + (Math.random() - .5) * 12, y, (Math.random() - .5) * 14, -18 - Math.random() * 14, '#ff4a6a', 1.1 + Math.random() * .4, 1, { g: -6, k: 'heart', drag: 1 }); },
+  souls(x, y, n = 4) { for (let k = 0; k < n; k++) { const a = Math.random() * 7; this.add(x, y, Math.cos(a) * 60, Math.sin(a) * 60 - 30, '#9adfff', 1.6, 1.5, { g: 0, k: 'soul', home: true, drag: 2.5 }); } },
+  itemPop(x, y, id, of) { this.add(x, y, (P.x - x) * .3, -95, '#fff', 1.1, 1, { g: 230, k: 'item', home: true, drag: .5 }); const m = World.cur; m.parts[m.parts.length - 1].item = id; m.parts[m.parts.length - 1].of = of; },
+  poof(x, y, col = '#ffffff', n = 8) { for (let k = 0; k < n; k++) { const a = k / n * 6.28; this.add(x, y, Math.cos(a) * 26, Math.sin(a) * 18 - 6, col, .5, 2, { g: -10, k: 'puff', grow: 3, drag: 2.5 }); } },
+  update(dt) {
+    const m = World.cur;
+    for (let i = m.parts.length - 1; i >= 0; i--) {
+      const p = m.parts[i]; p.life -= dt;
+      if (p.home && p.life < p.max - (p.k === 'item' ? .45 : .35)) { const dx = P.x - p.x, dy = P.y - 14 - p.y, d = Math.hypot(dx, dy) || 1; p.vx += dx / d * 600 * dt; p.vy += dy / d * 600 * dt; if (d < 6) { p.life = 0; } }
+      if (p.drag) { p.vx *= Math.max(0, 1 - p.drag * dt); p.vy *= Math.max(0, 1 - p.drag * dt); }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.r += p.vr * dt;
+      if (p.life <= 0) m.parts.splice(i, 1);
+    }
+  },
+  draw(g) {
+    const m = World.cur;
+    for (const p of m.parts) {
+      const k = Math.max(0, p.life / p.max);
+      g.globalAlpha = Math.min(1, k * 1.6);
+      switch (p.k) {
+        case 'puff': { const r = p.size + p.grow * (1 - k); g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, r, 0, 7); g.fill(); break; }
+        case 'ring': { const r = 1 + p.grow * (1 - k); g.strokeStyle = p.col; g.lineWidth = .8; g.beginPath(); g.ellipse(p.x, p.y, r, r * .45, 0, 0, 7); g.stroke(); break; }
+        case 'spark': g.globalCompositeOperation = 'lighter'; g.fillStyle = p.col; g.fillRect(p.x - .5, p.y - .5, 1.2, 1.2); g.globalCompositeOperation = 'source-over'; break;
+        case 'heart': g.drawImage(itemIconCanvas('heartfx'), p.x - 3, p.y - 3, 6, 6); break;
+        case 'item': g.drawImage(itemIconCanvas(p.item, p.of), p.x - 6, p.y - 6, 12, 12); break;
+        case 'soul': g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(150,220,255,.5)'; g.beginPath(); g.arc(p.x, p.y, 2.5, 0, 7); g.fill(); g.fillStyle = '#eaffff'; g.fillRect(p.x - .7, p.y - .7, 1.4, 1.4); g.globalCompositeOperation = 'source-over'; break;
+        case 'chip': g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.col; g.fillRect(-p.size / 2, -p.size / 2, p.size, p.size); g.restore(); break;
+        default: g.fillStyle = p.col; g.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+    }
+    g.globalAlpha = 1;
+  },
 };
 
 /* ---------- бой ---------- */

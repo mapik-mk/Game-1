@@ -3,16 +3,16 @@
   <div id="vignette"></div>
   <div id="hud" hidden>
     <div id="hud-left">
-      <div class="bar" id="bar-hp"><b>HP</b><span><i></i></span></div>
-      <div class="bar" id="bar-en"><b>ЭН</b><span><i></i></span></div>
-      <div class="bar" id="bar-sn"><b>РАС</b><span><i></i></span></div>
-      <div id="souls"></div>
+      <div class="bar" id="bar-hp"><img id="ic-hp" alt="Здоровье"><span><i></i></span></div>
+      <div class="bar" id="bar-en"><img id="ic-en" alt="Энергия"><span><i></i></span></div>
+      <div class="bar" id="bar-sn"><img id="ic-sn" alt="Рассудок"><span><i></i></span></div>
+      <div id="souls"><span><img id="ic-soul" alt=""><b id="v-souls">0</b></span><span><img id="ic-estus" alt=""><b id="v-estus">3/3</b></span></div>
     </div>
     <div id="hud-right">
-      <div id="clock">
+      <div id="clock" class="frame">
         <div id="c-date"></div>
         <div id="c-time"></div>
-        <div id="c-gold"></div>
+        <div id="c-gold"><img id="ic-gold" alt=""><span id="v-gold"></span></div>
       </div>
       <button id="b-menu" aria-label="Меню">≡</button>
     </div>
@@ -23,13 +23,13 @@
   <div id="touch" hidden>
     <div id="joyzone"><div id="joybase"><div id="joyknob"></div></div></div>
     <div id="tbtns">
-      <button id="b-roll" class="tb small" aria-label="Кувырок">⟲</button>
-      <button id="b-act" class="tb" aria-label="Взаимодействие">✋</button>
+      <button id="b-roll" class="tb small" aria-label="Кувырок"><img id="b-roll-ico" alt=""></button>
+      <button id="b-act" class="tb" aria-label="Взаимодействие"><img id="b-act-ico" alt=""></button>
       <button id="b-use" class="tb big" aria-label="Использовать"><img id="b-use-ico" alt=""></button>
     </div>
   </div>
-  <div id="dlg" hidden>
-    <div id="dlg-por"><canvas id="dlg-cv" width="64" height="64"></canvas></div>
+  <div id="dlg" class="frame" hidden>
+    <div id="dlg-por"><canvas id="dlg-cv" width="128" height="128"></canvas></div>
     <div id="dlg-body">
       <div id="dlg-name"></div>
       <div id="dlg-text"></div>

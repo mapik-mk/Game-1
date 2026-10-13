@@ -127,6 +127,8 @@ const ITEMS = {
   cat_smile: { n: 'Улыбка Чешира', type: 'key', key: true, ic: ['smile'], d: 'Улыбка без кота. Приносит удачу: больше добычи.' },
   pendant: { n: 'Кулон Утопленницы', type: 'misc', p: 0, ic: ['pendant'], d: 'Подари тому, с кем хочешь провести остаток вечности. 10 ♥ и свидания обязательны.' },
   bouquet: { n: 'Букет', type: 'misc', p: 100, ic: ['bouquet'], d: 'Подари при 8 ♥, чтобы начать встречаться.' },
+  page: { n: 'Страница рукописи', type: 'key', key: true, ic: ['page'], p: 0, d: '' },
+  heartfx: { n: '♥', type: 'misc', ic: ['heart', '#ff3a5a'], p: 0, key: true, d: '' },
   estus_shard: { n: 'Осколок эстуса', type: 'use', p: 0, ic: ['crystal', '#ff8a20'], d: 'Используй: +1 заряд Фляги Эстуса.' },
 
   // --- еда ---

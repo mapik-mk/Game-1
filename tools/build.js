@@ -7,12 +7,11 @@ const src = path.join(root, 'src');
 
 const js = fs.readdirSync(src).filter(f => f.endsWith('.js')).sort()
   .map(f => `// ===== ${f} =====\n` + fs.readFileSync(path.join(src, f), 'utf8')).join('\n');
-const css = fs.readFileSync(path.join(src, 'style.css'), 'utf8');
+// шрифты встроены как data:URI (работают офлайн)
+const fontCss = fs.existsSync(path.join(src, 'fonts', 'fonts.css')) ? fs.readFileSync(path.join(src, 'fonts', 'fonts.css'), 'utf8') : '';
+const fonts = '';
+const css = fontCss + '\n' + fs.readFileSync(path.join(src, 'style.css'), 'utf8');
 const body = fs.readFileSync(path.join(src, 'body.html'), 'utf8');
-
-const fonts = '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
-  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
-  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Neucha&family=Pixelify+Sans:wght@400;600;700&family=Rubik+Wet+Paint&display=swap">';
 
 const inner = `<title>Чёрные Почвы</title>\n${fonts}\n<style>\n${css}\n</style>\n${body}\n<script>\n${js}\n</script>\n`;
 

@@ -55,8 +55,8 @@ const Fishing = {
     const it = ITEMS[id];
     if (it.type !== 'fish') {
       this.state = 'done'; this.t = 0;
-      if (id === 'goldball') { S.flags.goldball = true; Inv.add('goldball', 1); UI.note('Выловлен Золотой мяч!', 'good'); AU.sfx('catch'); Quests.check(); return; }
-      if (Inv.add(id, 1)) { UI.note(`Выловлено: ${it.n}`); AU.sfx('pickup'); } Skills.xp('fishing', 3);
+      if (id === 'goldball') { S.flags.goldball = true; Inv.give('goldball', 1); UI.note('Выловлен Золотой мяч!', 'good'); AU.sfx('catch'); Quests.check(); return; }
+      Inv.give(id, 1); UI.note(`Выловлено: ${it.n}`); AU.sfx('pickup'); Skills.xp('fishing', 3);
       return;
     }
     const f = FISH[id];
@@ -90,7 +90,7 @@ const Fishing = {
     const id = this.fish, f = FISH[id], M = this.mini;
     const lvl = skillLvl('fishing');
     let q = 0; const r = Math.random(); if (M.perfect && r < .4 + lvl * .04) q = 2; else if (r < .2 + lvl * .04 + (M.perfect ? .3 : 0)) q = 1;
-    if (Inv.add(id, 1, q)) { UI.note(`Поймано: ${f.n}${M.perfect ? ' — идеально!' : ''}`, 'good', false, id); } else Drops.spawn(World.cur, P.x, P.y - 8, id, 1, q);
+    Inv.give(id, 1, q); UI.note(`Поймано: ${f.n}${M.perfect ? ' — идеально!' : ''}`, 'good', false, id);
     AU.sfx('catch');
     Skills.xp('fishing', Math.round(3 + f.diff / 2.5 * (M.perfect ? 1.4 : 1)));
     if (f.s) Sanity.add(f.s);

@@ -285,6 +285,7 @@ function buildFloor(n) {
 }
 function buildBossFloor(m, n) {
   const W = m.w, H = m.h, cx = 17, cy = 11;
+  m.dark = .5;
   m.fill(0, 0, W, H, G_.DWALL);
   m.ellipse(cx, cy, 9.5, 7.5, G_.DFLOOR);
   m.fill(16, 18, 3, 8, G_.DFLOOR);

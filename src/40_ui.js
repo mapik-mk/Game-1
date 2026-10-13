@@ -287,7 +287,7 @@ const UI = {
       const reqTxt = Object.entries(r.in).map(([k, n]) => `${ITEMS[k].n} ${Inv.count(k)}/${n}`).join(' · ');
       list.append(h('div', { class: 'li' + (locked ? ' dis' : '') }, h('img', { src: iconURL(id), alt: '' }),
         h('div', { class: 't' }, h('b', null, ITEMS[id].n + (r.out > 1 ? ' ×' + r.out : '')), h('small', null, locked ? (r.need ? `Нужно: ${SKILLS[r.need[0]]} ${r.need[1]}` : 'Рецепт неизвестен') : reqTxt), h('small', null, T(ITEMS[id].d))),
-        h('button', { class: 'btn' + (can ? ' green' : ''), disabled: !can, onclick: () => { for (const [k, n] of Object.entries(r.in)) Inv.remove(k, n); Inv.add(id, r.out); AU.sfx('buy'); re(); } }, 'Создать')));
+        h('button', { class: 'btn' + (can ? ' green' : ''), disabled: !can, onclick: () => { if (!Inv.canAdd(id)) { UI.note('Нет места в рюкзаке.', 'bad'); AU.sfx('error'); return; } for (const [k, n] of Object.entries(r.in)) Inv.remove(k, n); Inv.add(id, r.out); AU.sfx('buy'); re(); } }, 'Создать')));
     }
     b.append(list);
   },
@@ -404,7 +404,7 @@ const UI = {
         const can = Object.entries(r.in).every(([k, n]) => Inv.has(k, n));
         const nm = k => k === 'any:fish' ? 'любая рыба' : k === 'any:mushroom' ? 'любые грибы' : ITEMS[k].n;
         list.append(h('div', { class: 'li' }, h('img', { src: iconURL(id), alt: '' }), h('div', { class: 't' }, h('b', null, ITEMS[id].n), h('small', null, Object.entries(r.in).map(([k, n]) => `${nm(k)} ${Inv.count(k)}/${n}`).join(' · ')), h('small', null, T(ITEMS[id].d))),
-          h('button', { class: 'btn' + (can ? ' green' : ''), disabled: !can, onclick: () => { for (const [k, n] of Object.entries(r.in)) Inv.remove(k, n); Inv.add(id, 1); AU.sfx('eat'); re(); } }, 'Готовить')));
+          h('button', { class: 'btn' + (can ? ' green' : ''), disabled: !can, onclick: () => { if (!Inv.canAdd(id)) { UI.note('Нет места в рюкзаке.', 'bad'); AU.sfx('error'); return; } for (const [k, n] of Object.entries(r.in)) Inv.remove(k, n); Inv.add(id, 1); AU.sfx('eat'); re(); } }, 'Готовить')));
       }
       b.append(list);
     });
@@ -462,7 +462,7 @@ const Shops = {
     if (sh.recipes) opts.push('Рецепты');
     opts.push('Поговорить', 'Уйти');
     const list = opts.filter(Boolean);
-    if (id === 'klim' && S.upgrading && S.upgrading.day <= S.absDay) { const u = S.upgrading; S.upgrading = null; S.tools[u.tool] = u.tier; Inv.add(u.tool, 1); _urlCache.clear(); for (const k of [...SPR.keys()]) if (k.startsWith('icon:')) SPR.delete(k); await UI.say('klim', `...Готово. ${ITEMS[u.tool].n}: ${TIER_NAMES[u.tier].toLowerCase()} уровень. Держи.`, 'happy'); UI.toolbar(); return; }
+    if (id === 'klim' && S.upgrading && S.upgrading.day <= S.absDay) { const u = S.upgrading; S.upgrading = null; S.tools[u.tool] = u.tier; Inv.give(u.tool, 1); _urlCache.clear(); for (const k of [...SPR.keys()]) if (k.startsWith('icon:')) SPR.delete(k); await UI.say('klim', `...Готово. ${ITEMS[u.tool].n}: ${TIER_NAMES[u.tier].toLowerCase()} уровень. Держи.`, 'happy'); UI.toolbar(); return; }
     const c = await UI.choose(`${sh.n}`, list);
     const o = list[c];
     if (o === 'Купить') this.open(id);
@@ -531,7 +531,7 @@ const Shops = {
     if (S.money < 25) { UI.note('Нужно 25з', 'bad'); return; }
     S.money -= 25; Inv.remove('geode', 1);
     const it = U.wchoice(GEODE_LOOT); const n = ['coal', 'iron_ore', 'gold_ore', 'clay'].includes(it) ? U.ri(2, 5) : 1;
-    AU.sfx('rockbreak'); Inv.add(it, n);
+    AU.sfx('rockbreak'); Inv.give(it, n);
     await UI.say('klim', `...Тресь. Внутри: ${ITEMS[it].n}${n > 1 ? ' ×' + n : ''}.${it === 'stoneeye' ? ' Не смотри в него.' : ''}`);
     if (Inv.has('geode')) this.geode();
   },

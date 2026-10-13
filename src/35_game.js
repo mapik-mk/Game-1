@@ -175,7 +175,7 @@ const Game = {
   },
   /* ---------- колодец ---------- */
   inWell(m) { S.lastWasWell = true; if (m.bossPending) this.bossIntro(m); },
-  leftWell() { },
+  leftWell() { S.lastWasWell = false; },
   async bossIntro(m) {
     // босс появляется, когда игрок проходит туман
   },

@@ -26,6 +26,18 @@ const Inv = {
     return false;
   },
   after(id, n, q, of, silent) { if (!silent) UI.pickNote(id, n, q, of); UI.toolbar(); Quests.check(); S.seen = S.seen || {}; S.seen[id] = 1; },
+  canAdd(id, q = 0, of = undefined) {
+    if (this.stackable(id)) for (let i = 0; i < S.invSize; i++) { const s = S.inv[i]; if (s && s.id === id && (s.q || 0) === (q || 0) && s.of === of) return true; }
+    for (let i = 0; i < S.invSize; i++) if (!S.inv[i]) return true;
+    return false;
+  },
+  // гарантированно выдать: если рюкзак полон — бросить на землю рядом
+  give(id, n = 1, q = 0, of = undefined) {
+    if (this.add(id, n, q, of)) return true;
+    const m = World.cur; if (m) { Drops.spawn(m, P.x, P.y - 6, id, n, q, of); for (const d of m.drops.slice(-n)) d.t = -1.5; }
+    UI.note(`Рюкзак полон — «${ITEMS[id].n}» на земле рядом.`, 'bad');
+    return false;
+  },
   free() { let c = 0; for (let i = 0; i < S.invSize; i++) if (!S.inv[i]) c++; return c; },
   count(id) {
     let c = 0;
@@ -174,7 +186,7 @@ const Farm = {
     let n = C.multi || 1; if (C.extra && Math.random() < C.extra) n++;
     if (!Inv.add(C.item, 1, q)) { UI.note('Рюкзак полон!', 'bad'); return true; }
     for (let k = 1; k < n; k++) if (!Inv.add(C.item, 1, 0, undefined, true)) Drops.spawn(m, x * 16 + 8, y * 16 + 8, C.item, 1);
-    if (C.seedBack && U.chance(.5)) Inv.add(C.item + '_seed', 1, 0, undefined, true);
+    if (C.seedBack && U.chance(.5) && !Inv.add(C.item + '_seed', 1, 0, undefined, true)) Drops.spawn(m, x * 16 + 8, y * 16 + 8, C.item + '_seed', 1);
     AU.sfx('harvest'); Parts.burst(x * 16 + 8, y * 16 + 4, C.col, 6);
     Skills.xp('farming', Math.round(16 * Math.log(.018 * ITEMS[C.item].p + 1)));
     S.stats.harvest = (S.stats.harvest || 0) + n;

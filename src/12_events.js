@@ -101,7 +101,7 @@ const Events = {
     else if (c === 1) await UI.say('marysue', 'Отпустить? А куда они пойдут? Их нет за пределами моей книги. Как и тебя, милый персонаж.', 'sad');
     else { await this.killFlash(); await UI.say('marysue', 'Ха-ха-ха! Ты не можешь убить автора на его же странице. Но попытка засчитана. Мне понравилось.', 'creepy'); S.sin++; }
     await narr('Она растворяется в чернилах. Фонари загораются вновь. На брусчатке остаётся клякса в форме сердца.');
-    Inv.add('ink', 3); Sanity.add(-5);
+    Inv.give('ink', 3); Sanity.add(-5);
     Music.play(Game.musicFor(World.cur)); Game.unlock();
   },
   async marySighting() {
@@ -225,7 +225,7 @@ const Events = {
     await narr('Гроб пуст. Внутри — только старая шляпа деда, связка лопат... и лист бумаги, исписанный чужим, красивым почерком.');
     Sanity.add(-8);
     await this.givePage(0);
-    Inv.add('copper_ore', 10);
+    Inv.give('copper_ore', 10);
     Game.unlock();
   },
   /* ---------- убийство (галлюцинация в стиле Black Souls) ---------- */
@@ -265,7 +265,7 @@ const Events = {
     if (id === 'mayor' && Fest.today() === 'eyes' && !S.flags.festDone && (S.flags.festEyes || 0) > 0) {
       const e = S.flags.festEyes; S.flags.festDone = true;
       await say('mayor', `Вы нашли ${e} ${U.plural(e, 'глаз', 'глаза', 'глаз')}! ${e >= 12 ? 'Невероятно! Вот главный приз — семена кровяники и 1000 золотых!' : e >= 7 ? 'Отлично! Вот 500 золотых!' : 'Ну... старались. Вот 100 золотых.'}`, 'happy');
-      if (e >= 12) { S.money += 1000; Inv.add('strawberry_seed', 10); } else if (e >= 7) S.money += 500; else S.money += 100;
+      if (e >= 12) { S.money += 1000; Inv.give('strawberry_seed', 10); } else if (e >= 7) S.money += 500; else S.money += 100;
       AU.sfx('coin'); return true;
     }
     // доска объявлений: принеси
@@ -277,7 +277,7 @@ const Events = {
     // Чешир: улыбка
     if (id === 'cheshire' && rel('cheshire').met && !S.flags.catSmile) {
       if (!S.flags.catAsk) { S.flags.catAsk = 1; await say('cheshire', 'Мрр. Хочешь мою улыбку? Принеси три Рыбы-Глаза. Глаза за улыбку — честный обмен в Стране Чудес.', 'happy'); Quests.start('q_cat'); return true; }
-      if (Inv.has('eyefish', 3)) { Inv.remove('eyefish', 3); Inv.add('cat_smile', 1); S.flags.catSmile = true; Quests.complete('q_cat'); await say('cheshire', 'Мрррр. Держи. Теперь ты улыбаешься без причины. Как все сумасшедшие. Удачи!', 'happy'); return true; }
+      if (Inv.has('eyefish', 3)) { Inv.remove('eyefish', 3); Inv.give('cat_smile', 1); S.flags.catSmile = true; Quests.complete('q_cat'); await say('cheshire', 'Мрррр. Держи. Теперь ты улыбаешься без причины. Как все сумасшедшие. Удачи!', 'happy'); return true; }
     }
     // Клим просит передать подарок
     if (id === 'klim' && hearts('klim') >= 3 && !S.flags.klimAsk) { S.flags.klimAsk = 1; await say('klim', '...Слушай. Роза любит топазы. Я... не могу. Передай ей топаз. От меня. Скажи... ничего не говори. Просто передай.', 'blush'); Quests.start('q_klim'); return true; }
@@ -350,7 +350,7 @@ const Events = {
     if (Fest.today() === 'spirits') UI.note('Сегодня Ночь Духов. В деревне неспокойно.', 'bad');
     if (S.mail.length) setTimeout(() => UI.note('В почтовом ящике письмо!', 'good'), 700);
     if (S.weddingDay && S.weddingDay <= S.absDay && !S.spouse) { await this.wedding(); return; }
-    if (S.spouse && Math.random() < .35) { const food = U.pick(['salad', 'spaghetti', 'pizza', 'tea', 'pumpkin_soup']); Inv.add(food, 1); UI.note(`${NPCS[S.spouse].short || NPCS[S.spouse].n} приготовил${S.spouse === 'klim' ? '' : 'а'} тебе завтрак!`, 'good'); }
+    if (S.spouse && Math.random() < .35) { const food = U.pick(['salad', 'spaghetti', 'pizza', 'tea', 'pumpkin_soup']); Inv.give(food, 1); UI.note(`${NPCS[S.spouse].short || NPCS[S.spouse].n} приготовил${S.spouse === 'klim' ? '' : 'а'} тебе завтрак!`, 'good'); }
     if (S.flags.spouseWatered) { S.flags.spouseWatered = 0; UI.note('Твоя половинка полила часть грядок.', 'good'); }
   },
   async wedding() {
@@ -451,7 +451,7 @@ const Events = {
     const c = await UI.choose(T('Мэри Сью протягивает тебе перо.'), opts, opts.indexOf('Убить'));
     const o = opts[c];
     S.flags.boss30 = true; Quests.complete('q_author');
-    Inv.add('quill', 1);
+    Inv.give('quill', 1);
     if (o === 'Дописать счастливый конец') await this.endingCozy();
     else if (o === 'Сжечь рукопись') await this.endingTrue();
     else if (o === 'Взять перо себе') await this.endingAuthor();
@@ -533,7 +533,7 @@ const HEART_EVENTS = [
     await say('eva', 'Раз уж ты здесь — плановый осмотр. Сядь. Открой рот. Скажи «а».', 'neutral');
     await narr('Ева светит фонариком тебе в горло. Очень долго.');
     await say('eva', 'Хм. Там... всё в порядке. А что ты ожидал{|а}? Глаз? Бывает и глаз. Рассудок — норма. Пока. Держи таблетку. Мятная.', 'happy');
-    Inv.add('pills', 1); Social.addPts('eva', 60);
+    Inv.give('pills', 1); Social.addPts('eva', 60);
   } },
   { id: 'eva5', npc: 'eva', h: 5, map: 'clinic', async fn() {
     await say('eva', 'Я лечу этих людей десять лет. И знаешь, что странно? Никто здесь не стареет. Мэру шестьдесят уже десять лет.', 'neutral');
@@ -588,12 +588,12 @@ const HEART_EVENTS = [
   { id: 'klim3', npc: 'klim', h: 4, map: 'smithy', cond: () => S.flags.klimRosa, async fn() {
     await say('klim', '...Я пришёл. После закрытия. Сказал слово.', 'neutral');
     await say('klim', '...Одно. «Привет». Она засмеялась. Потом мы пили чай. До шести утра. ...Спасибо.', 'happy');
-    Social.addPts('klim', 200); Inv.add('iron_bar', 5);
+    Social.addPts('klim', 200); Inv.give('iron_bar', 5);
   } },
   { id: 'pier4', npc: 'pierrot', h: 4, map: 'store', time: [900, 1700], async fn() {
     await say('pierrot', '*всхлип* Знаете... сегодня я впервые за год продал всё. Всё! Это вы. Вы покупаете больше, чем вся деревня.', 'happy');
     await say('pierrot', 'Возьмите. Это мой лучший товар. Я берёг его для особого покупателя. *счастливо рыдает*', 'happy');
-    Inv.add('qfert', 10); Social.addPts('pierrot', 100);
+    Inv.give('qfert', 10); Social.addPts('pierrot', 100);
   } },
   { id: 'mayor4', npc: 'mayor', h: 4, map: 'mayor', async fn() {
     await say('mayor', 'Садитесь. Я... должен признаться. Колодец на вашей ферме — он был там до деревни. Ваш дед не выкопал его. Он его посадил.', 'sad');
@@ -683,7 +683,7 @@ const Mail = {
     while (S.mail.length) {
       const id = S.mail.shift(); S.mailRead.push(id); const L = LETTERS[id]; if (!L) continue;
       let extra = '';
-      if (L.items) { for (const [it, n] of L.items) Inv.add(it, n); extra = '\n\nВложено: ' + L.items.map(([it, n]) => ITEMS[it].n + ' ×' + n).join(', '); }
+      if (L.items) { for (const [it, n] of L.items) Inv.give(it, n); extra = '\n\nВложено: ' + L.items.map(([it, n]) => ITEMS[it].n + ' ×' + n).join(', '); }
       if (L.recipe) { S.recipes[L.recipe] = 1; extra += '\n\nВыучен рецепт: ' + ITEMS[L.recipe].n; }
       if (L.flag) { S.flags[L.flag] = 1; extra += '\n\nВыучен рецепт: Печь'; }
       if (L.start) Quests.start(L.start);
@@ -706,9 +706,9 @@ const QUESTS = {
   q_seed: { t: 'Чёрное семя', d: 'Дед просил не сажать. Но семя тёплое и пульсирует. Посади его и поливай каждый день — 14 дней.', prog: () => S.flags.fruit ? 'Плод собран' : S.flags.seedPlanted ? 'Растёт...' : 'Не посажено', done: () => !!S.flags.fruit, reward() { }, rt: 'Чёрный плод' },
   q_chapel: { t: 'Заброшенная часовня', d: 'Загляни в часовню на юге деревни и сделай подношение Жмуримо (собери любой набор).', prog: () => `Наборов: ${Bundles.doneCount()}`, done: () => Bundles.doneCount() >= 1, reward() { S.money += 500; }, rt: '500з', next: ['q_chapel_all'] },
   q_chapel_all: { t: 'Сытые Жмуримо', d: 'Собери все наборы часовни. Жмуримо обещают что-то важное.', prog: () => `Наборов: ${Bundles.doneCount()}/${BUNDLES.length}`, done: () => !!S.flags.chapelDone, reward() { }, rt: 'Страница + тайна' },
-  q_ship: { t: 'Первый капитал', d: 'Заработай 3000з отгрузкой через ящик у дома.', prog: () => `Отгружено: ${U.fmt(qp('ship'))}/3000з`, done: () => qp('ship') >= 3000, reward() { Inv.add('sprinkler', 2); }, rt: '2 разбрызгивателя' },
+  q_ship: { t: 'Первый капитал', d: 'Заработай 3000з отгрузкой через ящик у дома.', prog: () => `Отгружено: ${U.fmt(qp('ship'))}/3000з`, done: () => qp('ship') >= 3000, reward() { Inv.give('sprinkler', 2); }, rt: '2 разбрызгивателя' },
   q_shorts: { t: 'Фиолетовая тайна', d: 'Ты нашёл{|ла} фиолетовые шорты с биркой «Гнилушкин». Вернуть мэру... или отдать Розе для таверны?', prog: () => 'Шорты в рюкзаке', done: () => !!S.flags.shortsDone, reward() { }, rt: 'Зависит от выбора' },
-  q_frog: { t: 'Золотой мяч', d: 'Квакерия уронила золотой мяч в лесное озеро. Выуди его удочкой и подари ей.', prog: () => S.flags.goldball ? 'Мяч найден!' : 'Рыбачь в лесном озере', done: () => false, reward() { Inv.add('emerald', 1); }, rt: 'Изумруд + любовь' },
+  q_frog: { t: 'Золотой мяч', d: 'Квакерия уронила золотой мяч в лесное озеро. Выуди его удочкой и подари ей.', prog: () => S.flags.goldball ? 'Мяч найден!' : 'Рыбачь в лесном озере', done: () => false, reward() { Inv.give('emerald', 1); }, rt: 'Изумруд + любовь' },
   q_grave: { t: 'Могила деда', d: 'Копни могилу деда мотыгой после полуночи. Кладбище — на юго-востоке деревни.', prog: () => S.flags.graveDug ? 'Выкопано' : 'Ждёт полуночи', done: () => S.pages.includes(0), reward() { }, rt: 'Страница' },
   q_klim: { t: 'Слово кузнеца', d: 'Подари Розе топаз от имени Клима.', prog: () => 'Топаз → Роза', done: () => false, reward() { }, rt: 'Счастье Клима' },
   q_cat: { t: 'Улыбка без кота', d: 'Принеси Чеширу три Рыбы-Глаза (лесное озеро, осень и зима).', prog: () => `Рыба-Глаз: ${Inv.count('eyefish')}/3`, done: () => false, reward() { }, rt: 'Улыбка Чешира (удача)' },
@@ -797,8 +797,8 @@ const Bundles = {
     const [r, n] = b.reward;
     if (r === 'bridge') { S.flags.bridge = 1; World.maps.forest.fill(15, 24, 2, 1, G_.BRIDGE); UI.note('Жмуримо починили мост на болото в лесу!', 'good'); }
     else if (r === 'rodup') { S.tools.rod = Math.min(3, (S.tools.rod || 0) + 1); _urlCache.clear(); UI.note('Удочка улучшена! Полоса ловли шире.', 'good'); }
-    else if (r === 'money_room') { S.flags.lantern = 1; Inv.add('estus_shard', 1); UI.note('Жмуримо подарили Фонарь Жмуримо: в колодце светлее. И осколок эстуса.', 'good'); }
-    else { Inv.add(r, n); UI.note(`Награда: ${ITEMS[r].n} ×${n}`, 'good'); }
+    else if (r === 'money_room') { S.flags.lantern = 1; Inv.give('estus_shard', 1); UI.note('Жмуримо подарили Фонарь Жмуримо: в колодце светлее. И осколок эстуса.', 'good'); }
+    else { Inv.give(r, n); UI.note(`Награда: ${ITEMS[r].n} ×${n}`, 'good'); }
     if (b.room === 'Кладовая' && this.roomDone('Кладовая') && !S.flags.greenhouse) { S.flags.greenhouse = 1; for (const k of [...SPR.keys()]) if (k.startsWith('bld:')) SPR.delete(k); setTimeout(() => narr('Жмуримо облепили старую оранжерею на ферме. Стёкла срослись. Внутри — вечное лето. Здесь можно сажать что угодно в любой сезон.'), 500); }
     Quests.check();
     if (this.doneCount() === BUNDLES.length && !S.flags.chapelDone) { S.flags.chapelDone = 1; setTimeout(() => this.allDone(), 800); }

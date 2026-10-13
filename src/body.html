@@ -1,0 +1,43 @@
+<div id="app">
+  <canvas id="cv"></canvas>
+  <div id="vignette"></div>
+  <div id="hud" hidden>
+    <div id="hud-left">
+      <div class="bar" id="bar-hp"><b>HP</b><span><i></i></span></div>
+      <div class="bar" id="bar-en"><b>ЭН</b><span><i></i></span></div>
+      <div class="bar" id="bar-sn"><b>РАС</b><span><i></i></span></div>
+      <div id="souls"></div>
+    </div>
+    <div id="hud-right">
+      <div id="clock">
+        <div id="c-date"></div>
+        <div id="c-time"></div>
+        <div id="c-gold"></div>
+      </div>
+      <button id="b-menu" aria-label="Меню">≡</button>
+    </div>
+    <div id="locname"></div>
+    <div id="notes"></div>
+    <div id="toolbar"></div>
+  </div>
+  <div id="touch" hidden>
+    <div id="joyzone"><div id="joybase"><div id="joyknob"></div></div></div>
+    <div id="tbtns">
+      <button id="b-roll" class="tb small" aria-label="Кувырок">⟲</button>
+      <button id="b-act" class="tb" aria-label="Взаимодействие">✋</button>
+      <button id="b-use" class="tb big" aria-label="Использовать"><img id="b-use-ico" alt=""></button>
+    </div>
+  </div>
+  <div id="dlg" hidden>
+    <div id="dlg-por"><canvas id="dlg-cv" width="64" height="64"></canvas></div>
+    <div id="dlg-body">
+      <div id="dlg-name"></div>
+      <div id="dlg-text"></div>
+      <div id="dlg-choices"></div>
+    </div>
+    <div id="dlg-next">▼</div>
+  </div>
+  <div id="panel" hidden></div>
+  <div id="screen" hidden></div>
+  <div id="fade"></div>
+</div>

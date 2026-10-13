@@ -38,30 +38,37 @@ const UI = {
   chain: Promise.resolve(), dlg: null, typing: null, openT: 0, panelOpen: false, screenOpen: false, notesEl: null,
   init() {
     this.notesEl = $('#notes');
+    applyUIArt();
     const ic = { '#ic-hp': 'heart', '#ic-en': 'bolt', '#ic-sn': 'eye', '#ic-soul': 'soul', '#ic-estus': 'estus', '#ic-gold': 'coin', '#b-act-ico': 'hand', '#b-roll-ico': 'roll' };
     for (const k in ic) { const e = $(k); if (e) e.src = uiIconURL(ic[k]); }
   },
   layout() {
-    const w = innerWidth; const slot = Math.max(26, Math.min(44, Math.floor((w - 24) / 12) - 2));
+    this._ch = 0; this._t = null;
+    const w = innerWidth, px = (w <= 700 || innerHeight <= 520) ? 2 : 3;
+    const slot = Math.max(24, Math.min(50, Math.floor(innerHeight * .11), Math.floor((w - 12 * px - 2 - 22 - 10) / 12)));
     document.documentElement.style.setProperty('--slot', slot + 'px');
-    document.documentElement.style.setProperty('--tb-h', (slot + 14) + 'px');
+    document.documentElement.style.setProperty('--tb-h', (slot + 12 * px + 6) + 'px');
   },
   modal() { return !!this.dlg || this.panelOpen || this.screenOpen; },
   showHUD(on) {
     $('#hud').hidden = !on;
     const touch = Settings.touch === 'on' || (Settings.touch === 'auto' && Input.touch);
     $('#touch').hidden = !(on && touch);
+    $('#app').classList.toggle('touchmode', !!(on && touch));
   },
   hud() {
     if (!S) return;
-    const set = (id, v) => { const e = $(id + ' i'); e.style.width = Math.max(0, Math.min(100, v * 100)) + '%'; };
-    set('#bar-hp', S.hp / S.maxHp); set('#bar-en', Math.max(0, S.energy) / S.maxEnergy); set('#bar-sn', S.sanity / S.maxSanity);
+    const set = (id, v) => { const e = $(id + ' i'); e.style.height = Math.max(0, Math.min(100, v * 100)) + '%'; };
+    const en = Math.max(0, S.energy) / S.maxEnergy;
+    set('#bar-hp', S.hp / S.maxHp); set('#bar-en', en); set('#bar-sn', S.sanity / S.maxSanity);
     $('#bar-sn').classList.toggle('low', S.sanity < S.maxSanity * .3);
+    $('#bar-en').classList.toggle('mid', en < .5 && en >= .2); $('#bar-en').classList.toggle('low', en < .2);
     const t = Math.floor(S.time / 10) * 10, hh = Math.floor(t / 60) % 24, mm = t % 60;
     const wIcon = { sun: '☀', rain: '☂', storm: '⚡', snow: '❄' }[S.weather] || '';
     const dateTxt = `${WEEKDAYS[(S.absDay - 1) % 7]}. ${S.day} ${SEASONS_GEN[S.season]}`;
     if (this._d !== dateTxt) { this._d = dateTxt; $('#c-date').textContent = dateTxt; }
-    const tt = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${wIcon}`; if (this._t !== tt) { this._t = tt; $('#c-time').textContent = tt; }
+    const tt = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} ${wIcon}`;
+    if (this._t !== tt) { this._t = tt; $('#c-time').textContent = tt; const ch = $('#clock').offsetHeight; if (ch && ch !== this._ch) { this._ch = ch; document.documentElement.style.setProperty('--clock-h', ch + 'px'); document.documentElement.style.setProperty('--clock-w', Math.round(innerWidth - $('#clock').getBoundingClientRect().left) + 'px'); } const dc = $('#c-dial'), dg = dc.getContext('2d'); dg.clearRect(0, 0, dc.width, dc.height); dg.drawImage(clockDial(t), 0, 0); }
     const g = U.fmt(S.money) + ' з'; if (this._g !== g) { this._g = g; $('#v-gold').textContent = g; }
     const so = U.fmt(S.souls), es = `${S.estus}/${S.estusMax}`; if (this._s !== so + es) { this._s = so + es; $('#v-souls').textContent = so; $('#v-estus').textContent = es; }
     document.documentElement.style.setProperty('--gs', String(U.clamp((0.5 - S.sanity / S.maxSanity) * 2, 0, .85).toFixed(2)));
@@ -134,8 +141,9 @@ const UI = {
     }
   },
   drawPortrait(talk, blink) {
-    const cv = $('#dlg-cv'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height);
-    const c = portrait(this.porWho, this.porEmo, talk, blink); g.drawImage(c, 0, 0, c.width, c.height, 0, 0, cv.width, cv.height);
+    const cv = $('#dlg-cv'), c = portrait(this.porWho, this.porEmo, talk, blink);
+    if (cv.width !== c.width) { cv.width = c.width; cv.height = c.height; }
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height); g.drawImage(c, 0, 0);
   },
   advance() {
     const d = this.dlg; if (!d) return;
@@ -147,9 +155,11 @@ const UI = {
   closeDlg() { this.dlg = null; $('#dlg').hidden = true; Input.clear(); },
   _dialog(o) {
     return new Promise(res => {
-      const box = $('#dlg'); box.hidden = false; box.className = 'frame' + (o.narr ? ' narr' : (o.creep ? ' creepy' : ''));
-      const por = $('#dlg-por');
-      if (o.who && !o.narr) {
+      const box = $('#dlg'); box.hidden = false;
+      const por = $('#dlg-por'), side = !!(o.who && !o.narr);
+      box.className = (o.narr ? 'narr' : (o.creep ? 'creepy' : '')) + (side ? ' has-side' : '');
+      $('#dlg-side').hidden = !side;
+      if (side) {
         por.hidden = false; this.porWho = o.who; this.porEmo = o.emo || 'neutral'; this.porT = 0; this.drawPortrait(false, false);
       } else por.hidden = true;
       const name = o.narr ? '' : (o.who ? (o.who === 'marysue' ? 'Мэри Сью' : o.who === 'zhmur' ? 'Жмуримо' : o.who === 'grandpa' ? 'Дед' : o.who === 'fairy' ? 'Фея Листик' : (NPCS[o.who] ? (NPCS[o.who].short || NPCS[o.who].n) : o.who)) : '');
@@ -320,7 +330,7 @@ const UI = {
       if (!r || !r.met) { list.append(h('div', { class: 'li dis' }, h('div', { class: 't' }, h('b', null, '???'), h('small', null, 'Ещё не знакомы')))); continue; }
       const hv = hearts(id); const max = def.romance ? 10 : 10;
       const hs = '♥'.repeat(hv) + '♡'.repeat(Math.max(0, max - hv));
-      const img = h('img', { src: portrait(id, hv >= 6 && def.romance ? 'blush' : 'neutral').toDataURL(), alt: '', style: 'width:52px;height:52px;background:#e9c98a;border-radius:6px;border:2px solid #6b4a2a' });
+      const img = h('img', { src: portrait(id, hv >= 6 && def.romance ? 'blush' : 'neutral').toDataURL(), alt: '', style: 'width:64px;height:64px;image-rendering:pixelated;background:linear-gradient(#c8e6f0,#e9f4e0 60%,#d8c08a 60%);border:3px solid #7a3410' });
       const status = S.spouse === id ? ' · супруг(а)' : S.dating === id ? ' · встречаетесь' : S.fiance === id ? ' · помолвка' : '';
       list.append(h('div', { class: 'li' }, img, h('div', { class: 't' }, h('b', null, (def.short || def.n) + status), h('small', null, def.title + (def.bday ? ` · ДР: ${def.bday[1]} ${SEASONS_GEN[def.bday[0]]}` : '')), h('span', { class: 'hearts' }, hs), h('small', null, `${r.talked ? 'Говорили сегодня' : 'Не говорили сегодня'} · Подарков за неделю: ${r.week}/2${def.romance ? ' · романтика' : ''}`))));
     }

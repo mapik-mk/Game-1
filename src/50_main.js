@@ -51,11 +51,15 @@ const Title = {
     const look = { skin: LOOK_OPTS.skin[1], hair: LOOK_OPTS.hair[1], hairStyle: 'short', top: LOOK_OPTS.top[0], bottom: LOOK_OPTS.bottom[0], bottomStyle: 'pants', eyes: LOOK_OPTS.eyes[0], shoes: '#2a1a10' };
     let gender = 'm', name = '';
     const prev = h('canvas', { id: 'cc-preview', width: 64, height: 64 });
+    const porC = h('canvas', { id: 'cc-por', width: 64, height: 64 });
+    const prevRow = h('div', { class: 'cc-prev' }, prev, porC);
     const draw = () => {
       for (const k of [...SPR.keys()]) if (k.startsWith('ch:player') || k.startsWith('por:player')) SPR.delete(k);
       const g = prev.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 64, 64);
       const L = Object.assign({ id: 'player' }, look, { fem: gender === 'f', neck: gender === 'f' ? 'v' : null });
       g.drawImage(drawChar(L, 'down', 0), 0, 0, 16, 32, 16, 0, 32, 64);
+      const pg = porC.getContext('2d'); pg.clearRect(0, 0, 64, 64);
+      pg.drawImage(drawPortrait(Object.assign({ outfit: 'shirt' }, look, { fem: gender === 'f' }), 'happy'), 0, 0);
     };
     const swatches = (key) => { const d = h('div', { class: 'opts' }); for (const c of LOOK_OPTS[key]) d.append(h('button', { class: 'sw' + (look[key] === c ? ' on' : ''), style: `background:${c};border-color:${look[key] === c ? '#c2142e' : '#3f2311'}`, 'aria-label': c, onclick: () => { look[key] = c; rebuild(); } })); return d; };
     const rebuild = () => {
@@ -64,7 +68,7 @@ const Title = {
       const gen = h('div', { class: 'opts' }, ...[['m', 'Фермер'], ['f', 'Фермерша']].map(([v, t]) => h('button', { class: gender === v ? 'on' : '', onclick: () => { gender = v; if (v === 'f' && look.bottomStyle === 'pants') look.bottomStyle = 'skirt'; if (v === 'm' && look.bottomStyle === 'skirt') look.bottomStyle = 'pants'; rebuild(); } }, t)));
       const hs = h('div', { class: 'opts' }, ...LOOK_OPTS.hairStyle.map(([v, t]) => h('button', { class: look.hairStyle === v ? 'on' : '', onclick: () => { look.hairStyle = v; rebuild(); } }, t)));
       const bs = h('div', { class: 'opts' }, ...[['pants', 'Брюки'], ['skirt', 'Юбка'], ['long', 'Платье']].map(([v, t]) => h('button', { class: look.bottomStyle === v ? 'on' : '', onclick: () => { look.bottomStyle = v; rebuild(); } }, t)));
-      sc.append(h('div', { class: 'ending-t', style: 'font-size:30px' }, 'Новый фермер'), prev,
+      sc.append(h('div', { class: 'ending-t', style: 'font-size:30px' }, 'Новый фермер'), prevRow,
         h('div', { class: 'cc' }, h('label', { for: 'cc-name' }, 'Имя'), nameIn, h('span', null, 'Кто ты'), gen, h('span', null, 'Кожа'), swatches('skin'), h('span', null, 'Волосы'), swatches('hair'), h('span', null, 'Причёска'), hs,
           h('span', null, 'Глаза'), swatches('eyes'), h('span', null, 'Рубашка'), swatches('top'), h('span', null, 'Низ'), swatches('bottom'), h('span', null, 'Фасон'), bs),
         h('div', { class: 'menu-col' }, h('button', { class: 'btn green', onclick: () => this.begin(name, gender, look) }, 'Начать'), h('button', { class: 'btn red', onclick: () => this.show() }, 'Назад')));
@@ -120,6 +124,15 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 function boot() {
+  try { boot2(); } catch (e) {
+    console.error(e);
+    const m = document.getElementById('boot-msg'); if (m) m.textContent = 'Ошибка запуска: ' + (e && e.message);
+    return;
+  }
+  window.__bsReady = true;
+  const b = document.getElementById('boot'); if (b) b.remove();
+}
+function boot2() {
   Input.init(); UI.init(); Render.init();
   AU.vol.mus = Settings.music; AU.vol.sfx = Settings.sfx;
   document.addEventListener('visibilitychange', () => { if (document.hidden && AU.ctx) AU.ctx.suspend(); else if (AU.ctx) AU.ctx.resume(); });
@@ -128,4 +141,6 @@ function boot() {
   requestAnimationFrame(frame);
   window.__BS = { Game, World, P, get S() { return S; }, UI, Render, Input };
 }
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+// небольшая пауза, чтобы экран загрузки успел отрисоваться
+const bootSoon = () => setTimeout(boot, 30);
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootSoon); else bootSoon();

@@ -2,22 +2,22 @@
   <canvas id="cv"></canvas>
   <div id="vignette"></div>
   <div id="hud" hidden>
-    <div id="hud-left">
-      <div class="bar" id="bar-hp"><img id="ic-hp" alt="Здоровье"><span><i></i></span></div>
-      <div class="bar" id="bar-en"><img id="ic-en" alt="Энергия"><span><i></i></span></div>
-      <div class="bar" id="bar-sn"><img id="ic-sn" alt="Рассудок"><span><i></i></span></div>
-      <div id="souls"><span><img id="ic-soul" alt=""><b id="v-souls">0</b></span><span><img id="ic-estus" alt=""><b id="v-estus">3/3</b></span></div>
-    </div>
+    <div id="notes"></div>
     <div id="hud-right">
-      <div id="clock" class="frame">
+      <div id="clock">
         <div id="c-date"></div>
-        <div id="c-time"></div>
-        <div id="c-gold"><img id="ic-gold" alt=""><span id="v-gold"></span></div>
+        <div id="c-mid"><canvas id="c-dial" width="28" height="16"></canvas><span id="c-time"></span></div>
+        <div id="c-gold" class="fr-inset"><img id="ic-gold" alt=""><span id="v-gold"></span></div>
+        <div id="souls"><span title="Души"><img id="ic-soul" alt="Души"><b id="v-souls">0</b></span><span title="Эстус"><img id="ic-estus" alt="Эстус"><b id="v-estus">3/3</b></span></div>
       </div>
       <button id="b-menu" aria-label="Меню">≡</button>
     </div>
+    <div id="bars">
+      <div class="vbar" id="bar-sn" title="Рассудок"><img id="ic-sn" alt="Рассудок"><span><i></i></span></div>
+      <div class="vbar" id="bar-hp" title="Здоровье"><img id="ic-hp" alt="Здоровье"><span><i></i></span></div>
+      <div class="vbar" id="bar-en" title="Энергия"><img id="ic-en" alt="Энергия"><span><i></i></span></div>
+    </div>
     <div id="locname"></div>
-    <div id="notes"></div>
     <div id="toolbar"></div>
   </div>
   <div id="touch" hidden>
@@ -28,16 +28,33 @@
       <button id="b-use" class="tb big" aria-label="Использовать"><img id="b-use-ico" alt=""></button>
     </div>
   </div>
-  <div id="dlg" class="frame" hidden>
-    <div id="dlg-por"><canvas id="dlg-cv" width="128" height="128"></canvas></div>
+  <div id="dlg" hidden>
     <div id="dlg-body">
-      <div id="dlg-name"></div>
       <div id="dlg-text"></div>
       <div id="dlg-choices"></div>
+    </div>
+    <div id="dlg-side">
+      <div id="dlg-por"><canvas id="dlg-cv" width="64" height="64"></canvas></div>
+      <div id="dlg-name" class="fr-plate"></div>
     </div>
     <div id="dlg-next">▼</div>
   </div>
   <div id="panel" hidden></div>
   <div id="screen" hidden></div>
   <div id="fade"></div>
+  <div id="boot"><b>Чёрные Почвы</b><i></i><p id="boot-msg">Загрузка…</p></div>
 </div>
+<script>
+/* Страховка: если игра не запустилась (старый браузер, ошибка), показать причину вместо чёрного экрана */
+(function () {
+  var errs = [];
+  window.addEventListener('error', function (e) { errs.push((e.message || 'Ошибка') + (e.lineno ? ' @' + e.lineno : '')); show(); });
+  function show() {
+    if (window.__bsReady) return;
+    var m = document.getElementById('boot-msg'); if (!m) return;
+    m.innerHTML = 'Игра не смогла запуститься в этом браузере. Попробуйте открыть файл в свежем Chrome, Firefox, Edge или Safari.';
+    var pre = document.createElement('pre'); pre.textContent = errs.join('\n'); m.parentNode.appendChild(pre);
+  }
+  setTimeout(function () { if (!window.__bsReady) { errs.push('Таймаут запуска'); show(); } }, 12000);
+})();
+</script>

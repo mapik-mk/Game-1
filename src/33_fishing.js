@@ -111,16 +111,33 @@ const Fishing = {
   },
   drawUI(ctx) {
     if (!this.mini) return;
-    const M = this.mini, c = Render.cv, Z = Render.Z;
-    const H = Math.min(c.height * .55, 150 * Z), W = 22 * Z;
+    const M = this.mini, c = Render.cv, Z = Render.Z, t = Render.t;
+    const H = Math.min(c.height * .55, 150 * Z), W = 22 * Z, k = Math.max(2, Math.round(Z * .75));
     const x = c.width * .5 + 30 * Z, y = (c.height - H) / 2;
-    ctx.fillStyle = '#5a3a1e'; ctx.fillRect(x - 4 * Z, y - 4 * Z, W + 18 * Z, H + 8 * Z);
-    ctx.fillStyle = '#2a4a6a'; ctx.fillRect(x, y, W, H);
-    ctx.fillStyle = 'rgba(120,230,90,.85)'; ctx.fillRect(x + Z, y + M.bar * H, W - 2 * Z, M.bsize * H);
-    const fc = itemIconCanvas(this.fish); ctx.imageSmoothingEnabled = false; ctx.drawImage(fc, x + W / 2 - 8 * Z, y + M.fy * H - 8 * Z, 16 * Z, 16 * Z);
-    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(x + W + 4 * Z, y, 8 * Z, H);
-    ctx.fillStyle = M.prog > .66 ? '#4af04a' : M.prog > .33 ? '#f2c430' : '#e04040'; ctx.fillRect(x + W + 5 * Z, y + H * (1 - M.prog), 6 * Z, H * M.prog);
-    ctx.font = `700 ${7 * Z}px 'Pixelify Sans', monospace`; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-    ctx.fillText('Держи, чтобы поднять', x + W / 2 + 4 * Z, y + H + 14 * Z);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // деревянная рамка как у Stardew
+    drawFrame9(ctx, 'box', x - 6 * k, y - 6 * k, W + 12 * k + 14 * Z, H + 12 * k, k);
+    // вода
+    const gr = ctx.createLinearGradient(0, y, 0, y + H); gr.addColorStop(0, '#8ad4ef'); gr.addColorStop(.5, '#3f8fc4'); gr.addColorStop(1, '#1f4f80');
+    ctx.fillStyle = gr; ctx.fillRect(x, y, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    for (let i = 0; i < 6; i++) { const bx = x + ((i * 37) % 17) / 17 * (W - 3 * Z), by = y + H - ((t * (12 + i * 5) * Z + i * 31 * Z) % H); ctx.fillRect(Math.round(bx), Math.round(by), Math.max(2, Z), Math.max(2, Z)); }
+    // зелёная полоса
+    const inBar = M.fy >= M.bar && M.fy <= M.bar + M.bsize, by0 = y + M.bar * H, bh = M.bsize * H;
+    ctx.fillStyle = inBar ? '#8ee05a' : '#6cbc3e'; ctx.fillRect(x + Z, by0, W - 2 * Z, bh);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x + Z, by0, W - 2 * Z, Z); ctx.fillRect(x + Z, by0, Z, bh);
+    ctx.fillStyle = 'rgba(0,40,0,.4)'; ctx.fillRect(x + Z, by0 + bh - Z, W - 2 * Z, Z); ctx.fillRect(x + W - 2 * Z, by0, Z, bh);
+    const fc = itemIconCanvas(this.fish); ctx.imageSmoothingEnabled = false; ctx.drawImage(fc, x + W / 2 - 8 * Z, y + M.fy * H - 8 * Z + Math.sin(t * 20) * Z * .5, 16 * Z, 16 * Z);
+    // шкала улова
+    const px2 = x + W + 5 * Z, pw = 7 * Z;
+    ctx.fillStyle = '#3a1c10'; ctx.fillRect(px2, y, pw, H); ctx.fillStyle = '#7a3410'; ctx.fillRect(px2, y, Z, H);
+    const pc2 = M.prog > .66 ? '#5ce05a' : M.prog > .33 ? '#f2c430' : '#e8483a';
+    ctx.fillStyle = pc2; ctx.fillRect(px2 + Z, y + H * (1 - M.prog), pw - 2 * Z, H * M.prog);
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fillRect(px2 + Z, y + H * (1 - M.prog), Z, H * M.prog);
+    const fs = Math.max(13, 6.5 * Z);
+    ctx.font = `800 ${fs}px Nunito, system-ui, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillStyle = '#3e1708'; ctx.fillText('Держи, чтобы поднять', x + W / 2 + 7 * Z - 2, y + H + 6 * k + fs * 1.3 + 2);
+    ctx.fillStyle = '#fff3dc'; ctx.fillText('Держи, чтобы поднять', x + W / 2 + 7 * Z, y + H + 6 * k + fs * 1.3);
+    ctx.restore();
   },
 };

@@ -107,12 +107,35 @@ function drawGroundTile(px, tx, ty, t, map) {
     }
     case G_.IWALL: {
       const pal = map.wall || ['#7b5a8c', '#6a4b7a', '#c9a24a'];
-      const below = at(0, 1);
-      px.r(X, Y, 16, 16, pal[0]);
-      for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) if ((i + tx * 16) % 8 < 2) px.p(X + i, Y + j, pal[1]);
-      for (let i = 0; i < 16; i += 8) { px.p(X + i + 4, Y + 5, pal[2]); px.p(X + i + 4, Y + 11, pal[2]); }
-      if (below !== G_.IWALL && below !== null) { px.r(X, Y + 12, 16, 4, '#4a2e18'); px.hl(X, X + 15, Y + 12, '#7a5030'); px.hl(X, X + 15, Y + 15, '#2a1a0e'); }
-      if (at(0, -1) !== G_.IWALL) px.r(X, Y, 16, 2, '#2a1a0e');
+      const isF = (v) => v !== null && v !== G_.IWALL && v !== G_.VOID && v !== G_.DWALL;
+      const face = isF(at(0, 1)) || (at(0, 1) === G_.IWALL && isF(at(0, 2)));
+      if (!face) {
+        // верх стены (вид сверху): тёмное дерево с окантовкой со стороны пола
+        px.r(X, Y, 16, 16, '#2a1a10');
+        for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) if (H(i >> 2, j, 5) < .08) px.p(X + i, Y + j, '#332014');
+        if (isF(at(1, 0))) { px.vl(X + 13, Y, Y + 15, '#5a3820'); px.vl(X + 14, Y, Y + 15, '#8a5a32'); px.vl(X + 15, Y, Y + 15, '#3a2414'); }
+        if (isF(at(-1, 0))) { px.vl(X + 2, Y, Y + 15, '#5a3820'); px.vl(X + 1, Y, Y + 15, '#8a5a32'); px.vl(X, Y, Y + 15, '#3a2414'); }
+        if (isF(at(0, -1))) { px.hl(X, X + 15, Y + 2, '#5a3820'); px.hl(X, X + 15, Y + 1, '#8a5a32'); px.hl(X, X + 15, Y, '#3a2414'); }
+        break;
+      }
+      const lower = isF(at(0, 1));
+      // обои: вертикальные полосы с мелким узором
+      for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) {
+        const gx = i + tx * 16, st = gx % 8;
+        let c = st < 3 ? pal[1] : pal[0];
+        if (st === 5 && (j + Y) % 6 === 2) c = pal[2];
+        if (st === 3 || st === 7) c = mix(pal[0], pal[1], .5);
+        px.p(X + i, Y + j, c);
+      }
+      if (!isF(at(0, 2)) && at(0, -1) !== G_.IWALL) { px.r(X, Y, 16, 3, '#5a3a22'); px.hl(X, X + 15, Y + 3, '#8a5a32'); px.hl(X, X + 15, Y, '#3a2414'); }
+      else if (at(0, -1) !== G_.IWALL) { px.r(X, Y, 16, 2, '#5a3a22'); px.hl(X, X + 15, Y + 2, '#8a5a32'); }
+      if (lower) {
+        // деревянная панель и плинтус
+        px.r(X, Y + 6, 16, 10, '#8a5a32');
+        px.hl(X, X + 15, Y + 6, '#b07a42'); px.hl(X, X + 15, Y + 7, '#5a3a22');
+        for (let i = 0; i < 16; i += 8) { const x0 = X + i + 1; px.r(x0, Y + 9, 6, 4, '#7a4e2a'); px.hl(x0, x0 + 5, Y + 9, '#5a3a22'); px.vl(x0, Y + 9, Y + 12, '#5a3a22'); px.hl(x0, x0 + 5, Y + 13, '#a06e3e'); px.vl(x0 + 5, Y + 9, Y + 13, '#a06e3e'); }
+        px.r(X, Y + 14, 16, 2, '#4a2e18'); px.hl(X, X + 15, Y + 14, '#6a4426');
+      }
       break;
     }
     case G_.BRIDGE: {
